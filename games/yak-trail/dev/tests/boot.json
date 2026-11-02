@@ -1,0 +1,12 @@
+{
+  "page": "games/yak-trail/game/index.html",
+  "w": 960,
+  "h": 540,
+  "note": "The game boots to the title, with the font drawn from the art registry.",
+  "steps": [
+    { "waitFor": "typeof window.__studioMoment === 'function' && window.__studioMoment().tick > 30", "ms": 8000, "label": "the game is running" },
+    { "expect": "window.__studioMoment().scene", "equals": "title", "label": "the title is up" },
+    { "expect": "window.__yak.fontArt", "equals": true, "label": "text draws from the font art entry" },
+    { "shot": "01-title.png" }
+  ]
+}

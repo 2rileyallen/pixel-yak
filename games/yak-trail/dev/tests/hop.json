@@ -1,0 +1,20 @@
+{
+  "page": "games/yak-trail/game/index.html?scene=play&at=200",
+  "w": 960,
+  "h": 540,
+  "note": "A rock stops a trot; a hop clears it (the first rock is at x 256).",
+  "steps": [
+    { "waitFor": "window.__yak && window.__yak.scene() === 'play' && window.__yak.run().tick > 5", "ms": 8000, "label": "the climb is running" },
+    { "down": "ArrowRight" },
+    { "waitFor": "window.__yak.run().x >= 236 && window.__yak.run().vx === 0", "ms": 4000, "label": "the rock stops the trot" },
+    { "expect": "window.__yak.run().x < 248", "label": "the yak is still in front of the rock" },
+    { "down": "Space" },
+    { "waitFor": "!window.__yak.run().ground && window.__yak.run().y < -14", "ms": 2000, "label": "Space hops" },
+    { "shot": "01-hop.png" },
+    { "up": "Space" },
+    { "waitFor": "window.__yak.run().x > 272 && window.__yak.run().ground", "ms": 4000, "label": "it lands past the rock" },
+    { "up": "ArrowRight" },
+    { "expect": "window.__yak.run().falls", "equals": 0, "label": "no falls" },
+    { "shot": "02-landed.png" }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "yak-trail",
+  "name": "Yak Trail",
+  "genre": "side-view platformer",
+  "size": "demo",
+  "stage": 4,
+  "status": "active",
+  "resolution": {
+    "width": 320,
+    "height": 180,
+    "pixelScale": 3
+  },
+  "entry": "game/index.html",
+  "assets": "assets.js",
+  "edits": "game/art/edits",
+  "designs": {
+    "art": "gba-bright",
+    "game": "basics"
+  },
+  "engine": "1",
+  "description": "The demo game: a shaggy little yak trots up a mountain trail, hops over rocks and gaps, munches grass tufts and reaches the flags at the summit. One to three minutes.",
+  "idea": null,
+  "createdAt": "2026-11-02T15:05:10.889Z",
+  "updatedAt": "2026-11-02T15:05:10.889Z"
+}

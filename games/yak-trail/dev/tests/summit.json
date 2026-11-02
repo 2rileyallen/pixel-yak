@@ -1,0 +1,19 @@
+{
+  "page": "games/yak-trail/game/index.html?scene=play&at=4600",
+  "w": 960,
+  "h": 540,
+  "note": "Reaching the flags at the top finishes the run: the summit panel shows and the best time is kept.",
+  "steps": [
+    { "waitFor": "window.__yak && window.__yak.scene() === 'play' && window.__yak.run().tick > 5", "ms": 8000, "label": "the climb is running near the top" },
+    { "down": "ArrowRight" },
+    { "waitFor": "window.__yak.run().done", "ms": 6000, "label": "the yak reaches the summit" },
+    { "up": "ArrowRight" },
+    { "waitFor": "window.__yak.scene() === 'finish'", "ms": 4000, "label": "the summit panel comes up" },
+    { "expect": "JSON.parse(localStorage.getItem('yak-trail.slot1')).best > 0", "label": "the best time is saved" },
+    { "shot": "01-summit.png" },
+    { "key": "ArrowRight" },
+    { "key": "Enter" },
+    { "waitFor": "window.__yak.scene() === 'title' && !window.__yak.game.director.tr", "ms": 4000, "label": "Title goes back to the title" },
+    { "shot": "02-title-best.png" }
+  ]
+}

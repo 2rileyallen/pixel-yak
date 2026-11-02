@@ -1,0 +1,19 @@
+{
+  "page": "games/yak-trail/game/index.html?scene=play&at=2190",
+  "w": 960,
+  "h": 540,
+  "note": "A fall into a gap brings the yak back to the last cairn it passed (cairn 2 at x 1984, in the rocky part).",
+  "steps": [
+    { "waitFor": "window.__yak && window.__yak.scene() === 'play' && window.__yak.run().tick > 5", "ms": 8000, "label": "the climb is running in the rocks" },
+    { "expect": "window.__yak.run().check", "equals": 1, "label": "the cairn behind it counts as passed" },
+    { "shot": "01-rocky.png" },
+    { "down": "ArrowRight" },
+    { "waitFor": "!window.__yak.run().ground && window.__yak.run().x > 2240", "ms": 4000, "label": "it trots off the edge" },
+    { "up": "ArrowRight" },
+    { "shot": "02-falling.png" },
+    { "waitFor": "window.__yak.run().falls === 1", "ms": 4000, "label": "the fall counts" },
+    { "expect": "window.__yak.run().x", "equals": 1984, "label": "back at the cairn" },
+    { "wait": 400 },
+    { "shot": "03-back-at-the-cairn.png" }
+  ]
+}

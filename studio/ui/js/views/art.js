@@ -1273,7 +1273,7 @@ export class ArtView {
   requestsSection() {
     const s = this.session;
     const reqs = this.app.requestsFor(this.project.id, s.asset.id);
-    const open = reqs.filter((r) => r.status === 'open' || r.status === 'in-progress');
+    const open = reqs.filter((r) => !['done', 'wontfix', 'parked'].includes(r.status));
     const done = reqs.filter((r) => r.status === 'done').slice(0, 3);
     return h('div.insp-sec', null,
       h('div.section-title', null, 'Requests', h('span.grow')),

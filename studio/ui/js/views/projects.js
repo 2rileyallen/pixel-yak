@@ -39,8 +39,8 @@ export class ProjectsView {
     const app = this.app;
     const active = app.project && app.project.id === p.id;
     const ph = p.stage && app.stages[p.stage];
-    const openReq = app.requests.filter((r) => r.scope === p.id && (r.status === 'open' || r.status === 'in-progress')).length;
-    const forYou = app.requests.filter((r) => r.scope === p.id && r.assignee === 'user' && r.status === 'open').length;
+    const openReq = app.requests.filter((r) => r.scope === p.id && !['done', 'wontfix', 'parked'].includes(r.status)).length;
+    const forYou = app.requests.filter((r) => r.scope === p.id && ((r.assignee === 'user' && !['done', 'wontfix', 'parked'].includes(r.status)) || (r.assignee === 'ai' && r.status === 'planned'))).length;
     const running = app.running.has(p.id);
     return h(`div.pcard${active ? '.active' : ''}${p.status === 'archived' ? '.faded' : ''}`, null,
       h('div.row', { style: { alignItems: 'flex-start' } },

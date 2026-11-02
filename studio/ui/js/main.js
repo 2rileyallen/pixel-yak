@@ -219,7 +219,7 @@ class App {
       let a = this.reqByAsset.get(k);
       if (!a) this.reqByAsset.set(k, (a = { all: [], open: 0 }));
       a.all.push(r);
-      if (r.status === 'open' || r.status === 'in-progress') a.open++;
+      if (!['done', 'wontfix', 'parked'].includes(r.status)) a.open++;
     }
   }
 
@@ -241,9 +241,10 @@ class App {
   updateCounts() {
     if (!this.navBtns) return;
     const pid = this.project && this.project.id;
-    const openHere = this.requests.filter((r) => r.scope === pid && (r.status === 'open' || r.status === 'in-progress')).length;
-    const forYou = this.requests.filter((r) => r.assignee === 'user' && r.status === 'open').length;
-    setBadge(this.navBtns.inbox, forYou || openHere, forYou ? '' : 'teal', forYou ? `${forYou} waiting on you` : `${openHere} open for the AI`);
+    const openHere = this.requests.filter((r) => r.scope === pid && !['done', 'wontfix', 'parked'].includes(r.status)).length;
+    // waiting on you: the AI's questions/reminders for you, and briefs that need your Go / note / Not now
+    const forYou = this.requests.filter((r) => (r.assignee === 'user' && !['done', 'wontfix', 'parked'].includes(r.status)) || (r.assignee === 'ai' && r.status === 'planned')).length;
+    setBadge(this.navBtns.inbox, forYou || openHere, forYou ? '' : 'teal', forYou ? `${forYou} waiting on you (briefs to answer, questions)` : `${openHere} open for the AI`);
     const st = this.styleOf(this.project);
     setBadge(this.navBtns.lessons, st ? st.undistilled : 0, 'orchid', st ? `${st.undistilled} edits the AI hasn't learned from yet` : '');
   }

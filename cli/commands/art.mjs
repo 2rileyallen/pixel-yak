@@ -44,7 +44,7 @@ export const commands = {
         const ls = (await D.readLessons(p.style, { limit: 1000, project: pid })).filter((l) => l.asset === aid).slice(0, 5);
         if (ls.length) out('\nLessons (newest first): ' + ls.map((l) => l.pose + ' ' + l.kind + (l.note ? ' "' + l.note + '"' : '') + ' → games/' + pid + '/design/lessons/' + l.card).join(' | '));
       }
-      const open = (await D.listRequests(pid)).filter((x) => x.target && x.target.asset === aid && (x.status === 'open' || x.status === 'in-progress') && (!req || x.id !== req.id));
+      const open = (await D.listRequests(pid)).filter((x) => x.target && x.target.asset === aid && D.isLiveRequest(x) && (!req || x.id !== req.id));
       if (open.length) out('Other open requests on it: ' + open.map((x) => x.id + ' "' + x.title + '"').join(' | '));
       out('\npicture: ' + rel(res.png) + " (open it) — per frame: what the game shows, and below it the AI's own output");
       out('If the user fixed one frame and wants the others to match: node cli/yak.mjs propagate ' + pid + ' ' + aid + ' <thatPose>');

@@ -83,9 +83,10 @@ function drawCard(g, cfg, card, t) {
   const k = Math.min(kin, kout);
   if (card.backdrop !== 'none') ditherFill(g, Math.round(k * (card.backdrop === 'solid' ? 16 : 11)), col.bg);
   if (k < 0.5) return;
-  // the title: as big as fits (down to caption size), wrapped when even that is too wide
+  // the title: the biggest size at which it fits on two lines (down to caption size, then as many as it takes)
+  const fits = (s) => wrap(card.text, Math.floor((W * 0.88) / s)).every((l) => measure(l) * s <= W * 0.94);
   let ft = cfg.fontScale.title;
-  while (ft > f && measure(card.text) * ft > W * 0.88) ft--;
+  while (ft > f && !(fits(ft) && wrap(card.text, Math.floor((W * 0.88) / ft)).length <= 2)) ft--;
   const lines = wrap(card.text, Math.floor((W * 0.88) / ft));
   // heights include the descender rows (a glyph is 9 rows; lines are LINE_H apart)
   const titleH = lines.length * LINE_H * ft - ft;

@@ -37,7 +37,7 @@
 /* ---------------------------------------------------------------- player */
 .clip-player { display: flex; flex-direction: column; gap: 10px; flex: none; }
 .clip-player.a9x16 { width: calc(min(64vh, 680px) * 9 / 16); }
-.clip-player.a16x9 { width: min(620px, 42vw); }
+.clip-player.a16x9 { width: min(560px, 36vw); }
 .clip-player.a1x1 { width: min(440px, 32vw); }
 .clip-screen { position: relative; width: 100%; background: #05040a; border: 1px solid var(--line2); border-radius: var(--r2); overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, .35); }
@@ -73,7 +73,7 @@
 .clip-stills { display: flex; flex-wrap: wrap; gap: 6px; }
 .clip-still { position: relative; padding: 0; border: 1px solid var(--line2); border-radius: 3px; background: #05040a; cursor: zoom-in; overflow: hidden; }
 .clip-still:hover { border-color: var(--gold); }
-.clip-still img { display: block; image-rendering: pixelated; }
+.clip-still img { display: block; image-rendering: pixelated; object-fit: contain; }
 .clip-still.a9x16 img { width: 72px; height: 128px; }
 .clip-still.a16x9 img { width: 160px; height: 90px; }
 .clip-still.a1x1 img { width: 110px; height: 110px; }
@@ -82,7 +82,7 @@
 .clip-still-big img { max-width: 100%; max-height: 70vh; image-rendering: pixelated; }
 
 /* ------------------------------------------------------------------ form */
-.clip-form { flex: 1 1 400px; min-width: 360px; max-width: 680px; display: flex; flex-direction: column; gap: 14px; }
+.clip-form { flex: 1 1 340px; min-width: 340px; max-width: 680px; display: flex; flex-direction: column; gap: 14px; }
 .clip-sec { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px 14px; background: var(--bg1); border: 1px solid var(--line); border-radius: var(--r2); }
 .clip-sec-head { display: flex; align-items: center; gap: 8px; min-height: 26px; }
 .clip-sec-head > b, .clip-sec-head .check b { color: var(--text); font-size: 13px; }
@@ -100,9 +100,8 @@
 .clip-cap > .clip-span { grid-area: span; }
 .clip-cap > .grow { grid-area: text; }
 .clip-cap > .grow .input { width: 100%; }
-.clip-cap > .seg { grid-area: pos; }
+.clip-cap > .clip-pos { grid-area: pos; padding: 3px 6px; font-size: 12px; }
 .clip-cap > .icon-btn { grid-area: del; width: 26px; height: 26px; }
-.clip-cap .seg button { padding: 3px 8px; font-size: 11.5px; }
 .clip-save { position: sticky; bottom: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 10px 2px 14px; margin-top: -4px;
   background: linear-gradient(to bottom, rgba(8, 9, 19, 0), var(--bg0) 30%); font-size: 12px; }
 .clip-dirty { display: inline-flex; align-items: center; gap: 7px; color: var(--fire); font-weight: 600; }

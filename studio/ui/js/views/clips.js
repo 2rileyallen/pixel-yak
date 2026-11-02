@@ -3,7 +3,7 @@
 // change its words, their timing, the music, the length and the aspect in a simple form and
 // Re-render; Probe takes a few stills for framing. New clip… and Ask AI to change… write requests:
 // the AI writes recipes and shot scripts (skill promo).
-import { h, mount, btn, iconBtn, toast, modal, field, timeAgo, copyText, popMenu, confirmDialog } from '../ui.js';
+import { h, mount, btn, iconBtn, toast, modal, field, select, timeAgo, copyText, popMenu, confirmDialog } from '../ui.js';
 import { icon } from '../icons.js';
 import { openRequestDialog } from '../request-dialog.js';
 import { requestPrompt } from '../prompts.js';
@@ -144,8 +144,10 @@ export class ClipsView {
 
   // ------------------------------------------------------------- player ---
   playerCol(c) {
-    const a = c.clip.aspect.replace(':', 'x');
     const info = c.render && c.render.info;
+    // the player has the shape of the video it plays (the recipe may have changed shape since)
+    const f = info && Array.isArray(info.frame) ? info.frame : null;
+    const a = f ? (f[0] > f[1] ? '16x9' : f[0] < f[1] ? '9x16' : '1x1') : c.clip.aspect.replace(':', 'x');
     let video = null;
     const screen = h('div.clip-screen');
     if (c.render) {
@@ -250,7 +252,7 @@ export class ClipsView {
       h('span.clip-cap-n', null, String(i + 1)),
       span(cap),
       h('div.grow', null, txt(cap.text, (v) => { cap.text = v; }, 'Short words — under 40 letters reads best')),
-      seg(POS, cap.pos, (v) => { cap.pos = v; }),
+      select(POS, cap.pos, (v) => { cap.pos = v; mark(); }, { title: 'Where on the screen', class: 'clip-pos' }),
       iconBtn('trash', 'Remove this caption', () => { d.captions.splice(i, 1); mark(); this.rerenderForm(c); }))));
     const addCap = btn('Add caption', () => {
       const last = d.captions[d.captions.length - 1];

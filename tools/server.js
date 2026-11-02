@@ -1,8 +1,8 @@
-// server/server.js — read-only static server for playing the games in a normal browser
-// (`npm run web`, then http://127.0.0.1:8080/projects/tdg/game/). Pixel Yak itself is the
-// desktop app (electron/), which never uses this server.
+// tools/server.js — read-only static server for playing the games in a normal browser
+// (`npm run web`, then http://127.0.0.1:8080/games/). Pixel Yak itself is the
+// desktop app (studio/), which never uses this server.
 //
-// Hardened 2026-10-22 (see docs/REPO-REVIEW-2026-10-22.md): listens on 127.0.0.1 only, serves GET/
+// Hardened: listens on 127.0.0.1 only, serves GET/
 // HEAD only, no write APIs, no CORS headers, every path contained in the repo, dot-folders and
 // node_modules (except three.js) refused.
 
@@ -37,18 +37,18 @@ function resolveSafe(urlPath) {
 const server = http.createServer((req, res) => {
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405, { Allow: 'GET, HEAD' }); res.end(); return; }
   const url = new URL(req.url, `http://${HOST}`);
-  if (url.pathname === '/') { res.writeHead(302, { Location: '/projects/' }); res.end(); return; }
+  if (url.pathname === '/') { res.writeHead(302, { Location: '/games/' }); res.end(); return; }
   let abs = resolveSafe(url.pathname);
   if (!abs) { res.writeHead(403); res.end('Forbidden'); return; }
   fs.stat(abs, (err, st) => {
     if (!err && st.isDirectory()) {
       const index = path.join(abs, 'index.html');
       if (fs.existsSync(index)) { abs = index; }
-      else if (url.pathname.replace(/\/$/, '') === '/projects') {
+      else if (url.pathname.replace(/\/$/, '') === '/games') {
         // tiny index of playable games
         const games = fs.readdirSync(abs, { withFileTypes: true }).filter((d) => d.isDirectory() && fs.existsSync(path.join(abs, d.name, 'game', 'index.html')));
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        res.end(`<!doctype html><meta charset="utf-8"><title>Games</title><body style="font:14px system-ui;background:#0d0f1d;color:#e7e9f3;padding:24px"><h1>Games</h1><ul>${games.map((d) => `<li><a style="color:#f4c443" href="/projects/${encodeURIComponent(d.name)}/game/">${d.name}</a></li>`).join('')}</ul>`);
+        res.end(`<!doctype html><meta charset="utf-8"><title>Games</title><body style="font:14px system-ui;background:#0d0f1d;color:#e7e9f3;padding:24px"><h1>Games</h1><ul>${games.map((d) => `<li><a style="color:#f4c443" href="/games/${encodeURIComponent(d.name)}/game/">${d.name}</a></li>`).join('')}</ul>`);
         return;
       } else { res.writeHead(404); res.end('Not found'); return; }
     } else if (err) { res.writeHead(404); res.end('Not found'); return; }
@@ -59,5 +59,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, HOST, () => {
-  console.log(`[web] read-only, local only: http://${HOST}:${PORT}/projects/`);
+  console.log(`[web] read-only, local only: http://${HOST}:${PORT}/games/`);
 });

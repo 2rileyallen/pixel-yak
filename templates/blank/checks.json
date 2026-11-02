@@ -1,0 +1,26 @@
+{
+  "format": "pixel-yak-checks@1",
+  "note": "Which checks guard which part of {{NAME}} (docs/contracts/CHECKS.md). Commands run from the Pixel Yak folder. A changed file takes the checks of the FIRST area pattern it matches, so specific patterns go first. node cli/yak.mjs test {{ID}} runs the checks for what changed; --full runs the full set (the pre-push hook does too).",
+  "checks": {
+    "unit": { "run": "node --test \"games/{{ID}}/dev/**/*.test.mjs\"", "note": "the game's rules as tests (dev/*.test.mjs)" },
+    "studio": { "yak": "check", "note": "structure, every art id renders at its declared size, the linter" },
+    "boot": { "captures": ["boot"], "note": "the game boots and draws (dev/tests/boot.json)" },
+    "captures": { "captures": "*", "note": "every capture test in dev/tests/" }
+  },
+  "areas": {
+    "game/sprites.js": ["unit", "studio", "boot"],
+    "game/art/**": ["studio", "boot"],
+    "assets.js": ["studio", "boot"],
+    "design/**/*.js": ["studio", "boot"],
+    "design/**": [],
+    "game/**": ["unit", "boot"],
+    "dev/tests/**": ["captures"],
+    "dev/**": ["unit"],
+    "game.json": ["unit", "studio", "boot"],
+    "requests/**": [],
+    "**/*.md": []
+  },
+  "quick": ["unit"],
+  "full": ["unit", "studio", "captures"],
+  "perf": []
+}

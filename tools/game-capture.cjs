@@ -13,8 +13,10 @@
 // Checks: {"expect": js} passes when the value is truthy; with "equals" it must deep-equal that
 // JSON value. {"waitFor": js, "ms": max} polls until truthy and fails on timeout. Any failed
 // check is marked [FAIL] in console.txt, listed on stderr, written to result.json, and the run
-// exits 1 (steps keep running so the screenshots still show what happened).
-// Run every test of a project: node tools/run-captures.mjs <projectId> [names…]
+// exits 1 (steps keep running so the screenshots still show what happened — unless the test has
+// "failFast": true or the run gets --fail-fast: then it stops at the first failed check and saves
+// fail-step-<n>.png of that moment). Format: docs/contracts/CHECKS.md.
+// Run every test of a game: node tools/run-captures.mjs <gameId> [names…]
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -40,10 +42,12 @@ const show = (v) => { const s = v === undefined ? 'undefined' : JSON.stringify(v
 
 app.whenReady().then(async () => {
   const self = process.argv.findIndex((a) => a.endsWith('game-capture.cjs'));
-  const [stepsFile, outArg] = process.argv.slice(self + 1).filter((a) => !a.startsWith('--inspect'));
-  if (!stepsFile || !outArg) { console.error('usage: electron tools/game-capture.cjs <steps.json> <outDir>'); app.exit(2); return; }
+  const argv = process.argv.slice(self + 1).filter((a) => !a.startsWith('--inspect'));
+  const [stepsFile, outArg] = argv.filter((a) => !a.startsWith('--'));
+  if (!stepsFile || !outArg) { console.error('usage: electron tools/game-capture.cjs <steps.json> <outDir> [--fail-fast]'); app.exit(2); return; }
   const t0 = Date.now();
   const job = JSON.parse(fs.readFileSync(path.resolve(stepsFile), 'utf8'));
+  const failFast = argv.includes('--fail-fast') || job.failFast === true;
   const outDir = path.resolve(outArg);
   fs.mkdirSync(outDir, { recursive: true });
   const logs = [];
@@ -87,7 +91,15 @@ app.whenReady().then(async () => {
     .catch((err) => ({ err: err.message }));
   const fail = (i, what) => { failures.push(`step ${i + 1}: ${what}`); logs.push(`[FAIL] step ${i + 1}: ${what}`); };
   const key = (code, down) => js(`window.dispatchEvent(new KeyboardEvent('${down ? 'keydown' : 'keyup'}', { code: ${JSON.stringify(code)}, bubbles: true }))`);
+  // capturePage can hang forever when asked within ~100 ms of a page load: time it out (retried once below)
+  const grab = () => Promise.race([win.webContents.capturePage(), wait(10000).then(() => null)]);
   for (const [i, s] of job.steps.entries()) {
+    if (failFast && failures.length) { // stop here, with a picture of the moment it failed
+      const img = await grab();
+      if (img) { fs.writeFileSync(path.join(outDir, `fail-step-${i}.png`), img.toPNG()); shots++; }
+      logs.push(`[fail-fast] stopped before step ${i + 1} of ${job.steps.length}`);
+      break;
+    }
     if (s.wait) await wait(s.wait);
     if (s.key) { await key(s.key, true); await wait(s.ms || 50); await key(s.key, false); await wait(40); }
     if (s.hold) { await key(s.hold, true); await wait(s.ms || 300); await key(s.hold, false); await wait(20); }
@@ -112,8 +124,6 @@ app.whenReady().then(async () => {
     }
     if (s.shot) {
       await wait(34);
-      // capturePage can hang forever when asked within ~100 ms of a page load: time it out, retry once
-      const grab = () => Promise.race([win.webContents.capturePage(), wait(10000).then(() => null)]);
       let img = await grab();
       if (!img) { await wait(500); img = await grab(); }
       if (img) { fs.writeFileSync(path.join(outDir, s.shot), img.toPNG()); shots++; }

@@ -1,5 +1,6 @@
 // studio/ui/js/request-dialog.js — "ask the AI" dialog. Used from the Art view (about an asset or
-// frame, with a snapshot attached), the Inbox, and F9 moments captured in a running game.
+// frame, with a snapshot attached), the Inbox, and F9 moments captured in a running game. The AI
+// briefs every request before working it, unless the user ticks "Just do it" (skill requests).
 import { h, modal, field, select, toast, copyText } from './ui.js';
 import { icon } from './icons.js';
 import { requestPrompt } from './prompts.js';
@@ -11,6 +12,13 @@ const KIND_LABEL = {
   review: 'Review / approval', studio: 'Pixel Yak itself', other: 'Other',
 };
 
+// Every kind the data layer knows (app.info.kinds = REQUEST_KINDS), plus the current one, so a
+// kind without a label here is never shown — and saved — as the first option.
+export function kindOptions(app, current = null) {
+  const kinds = [...new Set([...((app && app.info && app.info.kinds) || Object.keys(KIND_LABEL)), ...(current ? [current] : [])])];
+  return kinds.map((k) => [k, KIND_LABEL[k] || k.charAt(0).toUpperCase() + k.slice(1)]);
+}
+
 // opts: { scope, kind, tier, title, body, target: { asset, pose, anim, box }, targetThumb: canvas,
 //         attachments: [dataUrl], context: { state, console: [] }, assignee }
 export function openRequestDialog(app, opts = {}) {
@@ -21,9 +29,13 @@ export function openRequestDialog(app, opts = {}) {
 
   const title = h('input.input', { value: opts.title || '', placeholder: 'e.g. Give the slash two more wind-up frames', maxlength: 200, autofocus: true });
   const body = h('textarea.input', { rows: 6, placeholder: 'What should change, and why? The more specific, the better the AI does.' }, opts.body || '');
-  const kind = select(Object.entries(KIND_LABEL), opts.kind || (target ? 'art' : 'gameplay'), null);
+  const kind = select(kindOptions(app, opts.kind), opts.kind || (target ? 'art' : 'gameplay'), null);
   const tier = select([['any', 'Any model'], ['builder', 'Builder (cheaper) model'], ['smart', 'Smart model']], opts.tier || 'any', null);
-  const who = select([['ai', 'The AI'], ['user', 'Me (a reminder)']], opts.assignee || 'ai', null);
+  const goNow = h('input', { type: 'checkbox' });
+  const goNowRow = h('label.check.go-now', { title: 'Without this, the AI first tells you what it thinks you asked and what it would change, and waits for your Go.' },
+    goNow, h('span', null, h('b', null, 'Just do it'), ' — skip the brief; the AI starts without checking back'));
+  const who = select([['ai', 'The AI'], ['user', 'Me (a reminder)']], opts.assignee || 'ai', (v) => goNowRow.classList.toggle('hidden', v !== 'ai'));
+  goNowRow.classList.toggle('hidden', (opts.assignee || 'ai') !== 'ai');
   const scopeSel = select([...projects.map((p) => [p.id, p.name]), ['_studio', 'Pixel Yak (the tool)']], scope, (v) => { scope = v; });
 
   const targetBox = h('div');
@@ -59,7 +71,8 @@ export function openRequestDialog(app, opts = {}) {
       h('div.form-grid', null, field('Game', scopeSel), field('Kind', kind), field('Who does it', who), field('Model', tier, 'Smart: new rigs, style learning, design. Builder: frames from a pose table, data, fixes.')),
       targetBox,
       attachments.length ? field('Attached', shots) : null,
-      ctxText ? h('label.check', null, includeCtx, 'Attach the game state and console lines the studio captured') : null),
+      ctxText ? h('label.check', null, includeCtx, 'Attach the game state and console lines the studio captured') : null,
+      goNowRow),
     actions: [
       { label: 'Cancel' },
       {
@@ -71,11 +84,12 @@ export function openRequestDialog(app, opts = {}) {
             title: title.value.trim(),
             body: body.value.trim() + (ctxText && includeCtx.checked ? `\n\n---\n${ctxText}` : ''),
             kind: kind.value, tier: tier.value, assignee: who.value, target,
+            goNow: who.value === 'ai' && goNow.checked,
           };
           try {
             const r = await window.studio.requests.create(scope, req, attachments.map((dataUrl, i) => ({ name: `a${i}.png`, dataUrl })));
             const proj = app.projects.find((p) => p.id === scope) || null;
-            toast(r.assignee === 'ai' ? 'Request saved — the AI will see it in the inbox.' : 'Reminder saved.', {
+            toast(r.assignee !== 'ai' ? 'Reminder saved.' : r.goNow ? 'Request saved — ready for the AI, no brief needed.' : 'Request saved — the AI will brief you before changing anything.', {
               kind: 'ok',
               action: r.assignee === 'ai' ? { label: 'Copy prompt', fn: () => copyText(requestPrompt(r, proj)).then(() => toast('Prompt copied — paste it into your AI chat.', { kind: 'ok' })) } : null,
             });

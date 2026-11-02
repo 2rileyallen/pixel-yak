@@ -5,7 +5,14 @@ import { DIRS, assertId, isId, within, str, nowIso, readJson, markWrite, writeJs
 import { projectDir } from './games.mjs';
 
 export const REQUEST_KINDS = ['art', 'frames', 'animation', 'audio', 'gameplay', 'level', 'story', 'bug', 'style', 'design', 'tuning', 'promo', 'kickoff', 'review', 'studio', 'other'];
-export const REQUEST_STATUS = ['open', 'in-progress', 'done', 'wontfix'];
+// Brief me first: open (waiting for the AI's brief) → planned (briefed, waiting on the user) →
+// approved (the user said go) → in-progress → done | wontfix | parked (the user said "not now").
+export const REQUEST_STATUS = ['open', 'planned', 'approved', 'in-progress', 'done', 'wontfix', 'parked'];
+export const REQUEST_FORMAT = 'pixel-yak-request@1'; // also reads the older 'pixel-studio-request@1' (same fields, fewer of them)
+// Live = still on someone's plate (counted as "open" in badges and lists).
+export const isLiveRequest = (r) => !!r && r.status !== 'done' && r.status !== 'wontfix' && r.status !== 'parked';
+const NOTE_BY = ['user', 'ai', 'web'];
+const cleanName = (v) => str(v, 60).replace(/[^\w .@+-]/g, '').trim();
 // scope: a game id, or '_studio' for requests about Pixel Yak itself (local/inbox/).
 // Closed requests can be moved to <dir>/archive/ (archiveRequests) so the live folder stays
 // small; every lookup by id still finds them, and lists include them when asked.
@@ -46,8 +53,9 @@ export function newRequestId(now = new Date()) {
 
 function normRequest(scope, r) {
   const t = r.target && typeof r.target === 'object' ? r.target : null;
+  const createdBy = ['ai', 'web'].includes(r.createdBy) ? r.createdBy : 'user'; // web = a player, from an online build
   return {
-    format: 'pixel-studio-request@1',
+    format: REQUEST_FORMAT,
     id: r.id,
     scope,
     kind: REQUEST_KINDS.includes(r.kind) ? r.kind : 'other',
@@ -63,14 +71,36 @@ function normRequest(scope, r) {
       box: t.box && ['x', 'y', 'w', 'h'].every((k) => Number.isFinite(t.box[k])) ? { x: t.box.x | 0, y: t.box.y | 0, w: t.box.w | 0, h: t.box.h | 0 } : null,
     } : null,
     attachments: Array.isArray(r.attachments) ? r.attachments.filter((a) => isId('file', a)) : [],
-    createdBy: ['ai', 'web'].includes(r.createdBy) ? r.createdBy : 'user', // web = a player, from an online build
+    createdBy,
     createdAt: str(r.createdAt, 40) || nowIso(),
     updatedAt: str(r.updatedAt, 40) || nowIso(),
     resolution: str(r.resolution, 8000),
+    plan: str(r.plan, 8000), // the AI's brief: you asked / I'd change / unsure / size
+    plannedAt: str(r.plannedAt, 40),
+    notes: Array.isArray(r.notes) ? r.notes.slice(-100).map((n) => ({
+      ts: str(n && n.ts, 40), by: NOTE_BY.includes(n && n.by) ? n.by : 'user', text: str(n && n.text, 4000),
+    })).filter((n) => n.text) : [], // the user's notes on the brief, oldest first
+    claimedBy: cleanName(r.claimedBy), // who is working it (start --by / YAK_AGENT)
+    goNow: r.goNow === true && createdBy !== 'web', // "just do it": filed without a brief; never for a player's ticket
     history: Array.isArray(r.history) ? r.history.slice(-50).map((h) => ({
       ts: str(h.ts, 40), by: ['ai', 'web'].includes(h.by) ? h.by : 'user', status: REQUEST_STATUS.includes(h.status) ? h.status : undefined, note: str(h.note, 4000),
+      ...(h.who ? { who: cleanName(h.who) } : {}),
     })) : [],
   };
+}
+
+// Can the AI start this request now? null = yes; otherwise why not:
+// 'user' (it's for the user) · 'closed' · 'parked' · 'player' (a player's ticket with no brief —
+// never skipped) · 'open' (not briefed yet) · 'planned' (briefed, waiting on the user's go).
+// anyway: the user said "just do it" in chat. Kickoffs are briefed by the new-game pitch itself.
+export function startBlock(r, { anyway = false } = {}) {
+  if (r.assignee === 'user') return 'user';
+  if (r.status === 'done' || r.status === 'wontfix') return 'closed';
+  if (r.status === 'approved' || r.status === 'in-progress') return null;
+  if (r.createdBy === 'web' && !r.plan) return 'player';
+  if (r.status === 'parked') return anyway ? null : 'parked';
+  if (r.goNow || r.kind === 'kickoff' || anyway) return null;
+  return r.status === 'planned' ? 'planned' : 'open';
 }
 
 async function readRequestsIn(scope, archived) {
@@ -127,30 +157,41 @@ export async function createRequest(scope, req, attachments = [], by = 'user') {
     await fs.writeFile(file, buf);
     names.push(name);
   }
+  // "Just do it" (goNow) skips the brief: the request starts approved. Never for a player's ticket.
+  const goNow = req.goNow === true && by !== 'web' && req.assignee !== 'user';
+  const status = goNow ? 'approved' : 'open';
   const r = normRequest(scope, {
-    ...req, id, status: 'open', createdBy: by, createdAt: nowIso(), updatedAt: nowIso(),
-    attachments: names, history: [{ ts: nowIso(), by, status: 'open', note: 'created' }],
+    ...req, id, status, goNow, plan: '', plannedAt: '', notes: [], claimedBy: '', createdBy: by, createdAt: nowIso(), updatedAt: nowIso(),
+    attachments: names, history: [{ ts: nowIso(), by, status, note: goNow ? 'created — just do it (no brief)' : 'created' }],
   });
   await writeJsonMarked(within(dir, `${id}.json`), r);
   return r;
 }
 
+// patch: any of title, body, kind, tier, assignee, resolution, target, status, goNow, claimedBy;
+//   plan: the AI's brief (stamps plannedAt) · addNote: text appended to notes (the user's notes on
+//   the brief, kept apart from history so none get trimmed) · note: a line for the history ·
+//   who: the agent's name for the history entry.
 export async function updateRequest(scope, id, patch, by = 'user') {
   const loc = locateRequest(scope, id);
   const cur = loc && (await readJson(loc.file));
   if (!cur) throw new Error(`request ${id} not found`);
+  patch = patch || {};
   let file = loc.file;
   // reopening an archived request brings it (and its attachments) back to the live folder
-  if (loc.archived && patch && patch.status && !CLOSED.has(patch.status) && REQUEST_STATUS.includes(patch.status)) {
+  if (loc.archived && patch.status && !CLOSED.has(patch.status) && REQUEST_STATUS.includes(patch.status)) {
     await moveRequest(scope, normRequest(scope, { ...cur, id }), false);
     file = within(requestsDir(scope), `${id}.json`);
   }
   const next = { ...cur };
-  for (const k of ['title', 'body', 'kind', 'tier', 'assignee', 'resolution', 'target']) if (k in (patch || {})) next[k] = patch[k];
-  const statusChanged = patch && patch.status && patch.status !== cur.status && REQUEST_STATUS.includes(patch.status);
+  for (const k of ['title', 'body', 'kind', 'tier', 'assignee', 'resolution', 'target', 'goNow', 'claimedBy']) if (k in patch) next[k] = patch[k];
+  if ('plan' in patch) { next.plan = str(patch.plan, 8000); next.plannedAt = nowIso(); }
+  const noteText = str(patch.addNote, 4000).trim();
+  if (noteText) next.notes = [...(Array.isArray(cur.notes) ? cur.notes : []), { ts: nowIso(), by, text: noteText }];
+  const statusChanged = patch.status && patch.status !== cur.status && REQUEST_STATUS.includes(patch.status);
   if (statusChanged) next.status = patch.status;
   next.history = [...(cur.history || [])];
-  if (statusChanged || (patch && patch.note)) next.history.push({ ts: nowIso(), by, status: statusChanged ? patch.status : undefined, note: str(patch && patch.note, 4000) });
+  if (statusChanged || patch.note) next.history.push({ ts: nowIso(), by, status: statusChanged ? patch.status : undefined, note: str(patch.note, 4000), ...(patch.who ? { who: patch.who } : {}) });
   next.updatedAt = nowIso();
   const r = normRequest(scope, { ...next, id });
   await writeJsonMarked(file, r);

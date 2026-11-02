@@ -43,7 +43,7 @@ export const commands = {
       const [w, h, s] = String(opt.res || '320x180x3').split('x').map(Number);
       const designs = { art: opt.art || null, sound: opt.sound || null, game: opt.game || null };
       const r = await D.createProject({ id, name: opt.name, genre: opt.genre || '', size: opt.size || 'toy', designs, resolution: { width: w, height: h, pixelScale: s }, pitch: typeof opt.pitch === 'string' ? opt.pitch : '', idea: opt.idea || null });
-      out(`created games/${id}/ — kickoff request ${r.kickoff.id}. It shows up in Pixel Yak now.`);
+      out(`created games/${id}/ — ${r.git && r.git.commit ? "its own git repo, first commit made" : r.git && r.git.repo ? "its own git repo (no commit: set git user.name/email, then commit)" : "not a git repo (git not found)"} · kickoff request ${r.kickoff.id}. It shows up in Pixel Yak now.`);
     },
   },
 

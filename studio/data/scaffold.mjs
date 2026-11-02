@@ -1,14 +1,16 @@
 // studio/data/scaffold.mjs — a new game: copies templates/<template>/ into games/<id>/, fills in its
 // name and size, copies the design files it starts from (one per shelf, from the library or
-// local/designs) into its design/ folder, and files a kickoff request for the AI (skill new-game).
+// local/designs) into its design/ folder, files a kickoff request for the AI (skill new-game), and
+// makes the game its own git repo with a first commit (games/ is ignored by the harness's git).
 // Also: checkProject, the quick structural check behind `yak check`.
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { DIRS, ROOT, EDITS, assertId, isId, within, str, nowIso, readJson, writeTextMarked, exists } from './core.mjs';
 import { normalizeProject, getProject, SIZES } from './games.mjs';
 import { readAllEdits } from './edits.mjs';
 import { createRequest } from './requests.mjs';
-import { copyDesign } from './designs.mjs';
+import { copyDesign, findDesign } from './designs.mjs';
 
 const TEXT = new Set(['.md', '.js', '.mjs', '.cjs', '.json', '.html', '.css', '.txt']);
 
@@ -33,6 +35,30 @@ export async function createProject(opts) {
   const template = isId('design', opts.template || 'blank') ? (opts.template || 'blank') : 'blank';
   const tdir = within(DIRS.templates, template);
   if (!exists(path.join(tdir, 'game.json'))) throw new Error(`no template "${template}" in templates/`);
+  // every design named must exist before anything is written, so a bad pick leaves no half-made game
+  for (const shelf of ['art', 'sound', 'game']) {
+    const want = opts.designs && opts.designs[shelf];
+    if (want && !findDesign(shelf, assertId('design', want))) throw new Error(`no design "${want}" on the ${shelf} shelf — node cli/yak.mjs designs ${shelf} lists them`);
+  }
+  try {
+    return await makeGame(opts, id, dir, tdir);
+  } catch (err) {
+    await fs.rm(dir, { recursive: true, force: true }).catch(() => {}); // never leave half a game behind
+    throw err;
+  }
+}
+
+// A first commit makes the game a repo of its own from day one: history, branches, and the clip
+// recorder (it films committed work). No remote — pushing is the user's call (skill collaborate).
+function initRepo(dir, name) {
+  const git = (...args) => spawnSync('git', args, { cwd: dir, encoding: 'utf8' });
+  if (git('init', '-q', '-b', 'main').status !== 0) return { repo: false, commit: false };
+  git('add', '-A');
+  const c = git('commit', '-q', '-m', `${name}: made with Pixel Yak`);
+  return { repo: true, commit: c.status === 0 };
+}
+
+async function makeGame(opts, id, dir, tdir) {
   const res = opts.resolution || {};
   const W = Math.max(64, Math.min(1920, Number(res.width) || 320));
   const H = Math.max(64, Math.min(1080, Number(res.height) || 180));
@@ -82,7 +108,8 @@ export async function createProject(opts) {
       '3. Brief the user on the first playable before writing code, then build it and get them playing.',
     ].join('\n'),
   }, [], 'user');
-  return { project: normalizeProject(id, game), kickoff };
+  const git = opts.git === false ? { repo: false, commit: false } : initRepo(dir, name);
+  return { project: normalizeProject(id, game), kickoff, git };
 }
 
 // Quick structural checks (yak check <game>).

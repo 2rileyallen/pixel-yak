@@ -219,7 +219,7 @@ export class InboxView {
   // The status panel: what's happening with this request and the one or two things to do about it.
   statusPanel(r) {
     if (r.assignee === 'user') {
-      return live(r) ? h('div.brief-card.waiting', null, h('div.brief-head', null, icon('user'), h('b', null, 'Waiting on you'), h('span.dim', null, r.createdBy === 'ai' ? '— the AI asked you this' : '— your own reminder'))) : null;
+      return live(r) ? h('div.brief-card.brief', null, h('div.brief-head', null, icon('user'), h('b', null, 'Waiting on you'), h('span.dim', null, r.createdBy === 'ai' ? '— the AI asked you this' : '— your own reminder'))) : null;
     }
     const copy = (label) => btn(label, () => this.app.copyPrompt(this.app.requestPrompt(r)), { ico: 'send', kind: 'teal' });
     const brief = r.plan ? this.briefBody(r) : null;
@@ -318,7 +318,7 @@ export class InboxView {
       this.statusPanel(r),
       t && t.asset ? h('div.target-pill', null, icon('art'), h('div.grow', null, h('b.mono', null, t.asset), t.pose ? h('span.dim', null, ` · ${t.pose}`) : null, t.anim ? h('span.dim', null, ` · anim ${t.anim}`) : null, t.box ? h('span.dim', null, ` · area ${t.box.x},${t.box.y} ${t.box.w}×${t.box.h}`) : null),
         btn('Open in Art', openTarget, { small: true, ico: 'open' })) : null,
-      field(r.createdBy === 'web' ? 'What the player wrote' : 'What you asked', body),
+      field(r.createdBy === 'web' ? 'What the player wrote' : r.createdBy === 'ai' ? (r.assignee === 'user' ? 'What the AI asks' : 'Details (filed by the AI)') : 'What you asked', body),
       h('div.form-grid', { style: { gridTemplateColumns: 'repeat(3, 1fr)' } }, field('Kind', kind), field('Model', tier), field('Who does it', who)),
       h('div.row', null, saveEdits),
       r.attachments.length ? field('Attachments', h('div.attachments', null, r.attachments.map((a) => h('img', { src: this.attUrl(r, a), alt: a, title: 'Click to enlarge', onclick: (e) => lightbox(e.target.src) })))) : null,

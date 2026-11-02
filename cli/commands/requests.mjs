@@ -87,7 +87,7 @@ export const commands = {
 
   park: {
     usage: 'park <requestId> [note]',
-    help: 'the user said "not now": status parked (kept, out of the way). bring it back\nwith approve or reopen',
+    help: 'the user said "not now": status parked (kept, out of the way). Bring it back\nwith approve or reopen',
     async run({ pos }) {
       const r = await findRequest(pos[0]);
       const note = pos.slice(1).join(' ').trim();

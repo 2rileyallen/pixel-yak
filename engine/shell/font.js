@@ -3,8 +3,11 @@
 // Glyph rows: '#' ink, '.' empty, '/' row separator. Cap height 7, x-height 5
 // (rows 2-6), descenders rows 7-8. Line height 10.
 // Inline color tags in strings: [g] gold [r] red [c] cyan [p] purple [w] white [m] muted [/] reset.
+// Font art (optional): a game that registers the `font` art entry (engine/art/font-art.js) and calls
+// useFontArt(sprite) draws text from those glyphs instead, so the user can repaint the font in
+// Pixel Yak. Games that don't opt in draw from the glyph rows below, as always.
 
-const GLYPHS = {
+export const GLYPHS = {
   A: '.###./#...#/#...#/#####/#...#/#...#/#...#',
   B: '####./#...#/#...#/####./#...#/#...#/####.',
   C: '.###./#...#/#..../#..../#..../#...#/.###.',
@@ -121,11 +124,72 @@ for (const [ch, src] of Object.entries(GLYPHS)) {
 
 const TAGS = { g: '#ffd34a', r: '#ff5a4a', c: '#6ee8ff', p: '#d79bff', w: '#ffffff', m: '#8a8fb0' };
 
+// A glyph's pose name in the font art entry: letters and digits are themselves, the rest have names
+// (pose names are [A-Za-z0-9_.-]).
+const NAMES = {
+  '.': 'period', ',': 'comma', '!': 'exclaim', '?': 'question', ':': 'colon', ';': 'semicolon', '-': 'hyphen',
+  '—': 'dash_em', '–': 'dash_en', '+': 'plus', '/': 'slash', '(': 'paren_l', ')': 'paren_r', '[': 'bracket_l',
+  ']': 'bracket_r', "'": 'apostrophe', '"': 'quote', '%': 'percent', '*': 'asterisk', '=': 'equals', '<': 'less',
+  '>': 'greater', '&': 'ampersand', '~': 'tilde', '#': 'hash', '★': 'star', '·': 'dot_mid', '×': 'times',
+  '…': 'ellipsis', '|': 'bar', '_': 'underscore', '^': 'caret', '←': 'arrow_l', '→': 'arrow_r', '↑': 'arrow_u',
+  '↓': 'arrow_d', '◀': 'tri_l', '▶': 'tri_r', '✓': 'check', 'é': 'e_acute', 'è': 'e_grave',
+};
+export const glyphName = (ch) => (/^[A-Za-z0-9]$/.test(ch) ? ch : NAMES[ch] || `u${ch.codePointAt(0).toString(16)}`);
+
+// ------------------------------------------------------------------ font art ---
+// useFontArt(sprite) draws every glyph from the game's `font` art entry (one pose per glyph,
+// engine/art/font-art.js); useFontArt(null) goes back to the built-in rows. Text colour multiplies
+// onto the art (white ink takes the colour exactly; darker pixels shade it). A glyph is as wide as its
+// built-in width, or wider when the user paints past it. The registry hands out a new canvas after an
+// edit, so one probe per call notices a repainted font and drops every cached glyph, string and width.
+let art = null; // { sprite, id, probe, wide: Map(ch → width) }
+export function useFontArt(spriteFn, { id = 'font' } = {}) {
+  art = null;
+  if (spriteFn) {
+    try { spriteFn(id, glyphName('A')); art = { sprite: spriteFn, id, probe: null, wide: new Map() }; }
+    catch (err) { console.warn(`[font] no "${id}" art entry (${err.message}) — drawing the built-in font`); }
+  }
+  flush();
+  return !!art;
+}
+function flush() { cache.clear(); strings.clear(); widths.clear(); wraps.clear(); if (art) art.wide.clear(); }
+function fresh() {
+  if (!art) return;
+  const p = art.sprite(art.id, glyphName('A'));
+  if (p !== art.probe) { flush(); art.probe = p; }
+}
+const artSource = (ch) => art.sprite(art.id, glyphName(parsed[ch] ? ch : '?'));
+function artWidth(ch) {
+  let w = art.wide.get(ch);
+  if (w !== undefined) return w;
+  const src = artSource(ch);
+  const d = src.getContext('2d').getImageData(0, 0, src.width, src.height).data;
+  let right = -1;
+  for (let i = 3; i < d.length; i += 4) if (d[i]) right = Math.max(right, ((i >> 2) % src.width));
+  w = Math.max((parsed[ch] || parsed['?']).w, right + 1);
+  art.wide.set(ch, w);
+  return w;
+}
+function artGlyph(ch, color) {
+  const src = artSource(ch);
+  const c = document.createElement('canvas');
+  c.width = src.width; c.height = src.height;
+  const g = c.getContext('2d');
+  g.drawImage(src, 0, 0);
+  g.globalCompositeOperation = 'multiply';
+  g.fillStyle = color;
+  g.fillRect(0, 0, c.width, c.height);
+  g.globalCompositeOperation = 'destination-in';
+  g.drawImage(src, 0, 0);
+  return c;
+}
+
 const cache = new Map();
 function glyph(ch, color) {
   const key = ch + color;
   let c = cache.get(key);
   if (c) return c;
+  if (art) { c = artGlyph(ch, color); cache.set(key, c); return c; }
   const gph = parsed[ch] || parsed['?'];
   c = document.createElement('canvas');
   c.width = gph.w;
@@ -167,6 +231,7 @@ export function glyphRows(ch) {
 
 function charW(ch) {
   if (ch === ' ') return SPACE_W;
+  if (art) return artWidth(ch);
   return (parsed[ch] || parsed['?']).w;
 }
 
@@ -185,6 +250,7 @@ function measureRaw(str) {
 }
 const widths = new Map();
 export function measure(str, scale = 1) {
+  fresh();
   let w = widths.get(str);
   if (w === undefined) w = bounded(widths, 4096, str, measureRaw(str));
   return w * scale;
@@ -238,6 +304,7 @@ function rendered(str, color, shadow, outline, scale) {
 // Draw text. o: { shadow: hex, outline: hex, align: 'left'|'center'|'right', scale, limit }
 // `limit` draws only the first N visible characters (typewriter effect).
 export function text(g, str, x, y, color = '#ffffff', o = {}) {
+  fresh();
   const scale = o.scale || 1;
   if (o.align === 'center') x -= Math.floor(measure(str, scale) / 2);
   else if (o.align === 'right') x -= measure(str, scale);
@@ -257,6 +324,7 @@ export function text(g, str, x, y, color = '#ffffff', o = {}) {
 // don't change them.
 const wraps = new Map();
 export function wrap(str, maxW) {
+  fresh();
   const key = `${maxW}\u0001${str}`;
   let lines = wraps.get(key);
   if (!lines) lines = bounded(wraps, 256, key, Object.freeze(wrapRaw(str, maxW)));

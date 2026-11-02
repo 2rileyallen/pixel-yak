@@ -1,0 +1,17 @@
+{
+  "page": "games/yak-trail/game/index.html",
+  "w": 960,
+  "h": 540,
+  "note": "The text comes from the font art entry: a glyph repainted in Pixel Yak (here, a baked edit set live) changes the game's text.",
+  "steps": [
+    { "waitFor": "window.__yak && window.__yak.scene() === 'title'", "ms": 8000, "label": "the title is up" },
+    { "expect": "window.__yak.measure('A')", "equals": 5, "label": "A is 5 px wide" },
+    { "js": "window.__yak.art.setEdit('font', { format: 'pixel-studio-edits@1', project: 'yak-trail', asset: 'font', legend: { a: ['GOLD', 4] }, poses: { A: { mode: 'baked', rows: ['.aaaa.', 'aa..aa', 'aa..aa', 'aaaaaa', 'aa..aa', 'aa..aa', 'aa..aa', '......', '......'] } } }); true" },
+    { "expect": "window.__yak.measure('A')", "equals": 6, "label": "the repainted A is wider, so text is measured from the art" },
+    { "js": "window.__yak.game.record.best = 3600; window.__yak.game.record.bestTufts = 9; true" },
+    { "waitFor": "Math.floor(window.__yak.game.director.tick / 32) % 2 === 0", "ms": 2000, "label": "the PRESS SPACE line is showing" },
+    { "shot": "01-gold-A.png" },
+    { "js": "window.__yak.art.setEdit('font', null); true" },
+    { "expect": "window.__yak.measure('A')", "equals": 5, "label": "reverting the edit brings the built-in A back" }
+  ]
+}

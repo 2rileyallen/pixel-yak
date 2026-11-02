@@ -1,0 +1,20 @@
+{
+  "w": 208, "h": 104,
+  "layers": [
+    { "asset": "sky", "pose": "day", "x": 0, "y": -40, "repeat": [7, 1] },
+    { "asset": "cloud", "pose": "b", "x": 150, "y": 22, "anchor": true },
+    { "asset": "cloud", "pose": "a", "x": 40, "y": 14, "anchor": true },
+    { "asset": "mountains_far", "pose": "range", "x": -60, "y": 18, "repeat": [2, 1] },
+    { "asset": "mountains_near", "pose": "ridge", "x": -100, "y": 40, "repeat": [2, 1] },
+    { "asset": "ground_fill", "pose": "meadow", "x": 0, "y": 80, "repeat": [8, 2] },
+    { "asset": "ground_fill", "pose": "meadow", "x": 128, "y": 64, "repeat": [5, 3] },
+    { "asset": "ground", "pose": "meadow", "x": 0, "y": 77, "repeat": [8, 1] },
+    { "asset": "ground", "pose": "meadow", "x": 128, "y": 61, "repeat": [5, 1] },
+    { "asset": "tuft", "pose": "sway_0", "x": 30, "y": 80, "anchor": true },
+    { "asset": "rock", "pose": "small", "x": 62, "y": 80, "anchor": true },
+    { "asset": "cairn", "pose": "flag_0", "x": 178, "y": 64, "anchor": true },
+    { "asset": "tuft", "pose": "sway_1", "x": 150, "y": 64, "anchor": true },
+    { "asset": "bird", "pose": "fly_0", "x": 196, "y": 30, "anchor": true },
+    { "asset": "yak", "pose": "hop", "x": 108, "y": 64, "anchor": true }
+  ]
+}

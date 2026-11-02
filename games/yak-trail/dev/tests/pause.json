@@ -1,0 +1,30 @@
+{
+  "page": "games/yak-trail/game/index.html?scene=play&at=300",
+  "w": 960,
+  "h": 540,
+  "note": "Esc pauses and everything freezes; Help lives in the pause menu and scrolls; Esc resumes.",
+  "steps": [
+    { "waitFor": "window.__yak && window.__yak.scene() === 'play' && window.__yak.run().tick > 5", "ms": 8000, "label": "the climb is running" },
+    { "key": "Escape" },
+    { "waitFor": "window.__yak.scene() === 'pause'", "ms": 2000, "label": "Esc pauses" },
+    { "js": "window.__frozen = window.__yak.run().tick" },
+    { "wait": 300 },
+    { "expect": "window.__yak.run().tick === window.__frozen", "label": "the run is frozen while paused" },
+    { "shot": "01-pause.png" },
+    { "key": "ArrowDown" },
+    { "key": "ArrowDown" },
+    { "key": "Enter" },
+    { "expect": "window.__yak.game.record.timer", "equals": false, "label": "the Timer box turns the timer off" },
+    { "key": "ArrowUp" },
+    { "key": "Enter" },
+    { "shot": "02-help.png" },
+    { "key": "ArrowDown" },
+    { "key": "ArrowDown" },
+    { "key": "ArrowDown" },
+    { "shot": "03-help-scrolled.png" },
+    { "key": "Escape" },
+    { "key": "Escape" },
+    { "waitFor": "window.__yak.scene() === 'play' && window.__yak.run().tick > window.__frozen + 10", "ms": 2000, "label": "Esc resumes" },
+    { "shot": "04-resumed-no-timer.png" }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "page": "games/yak-trail/game/index.html",
+  "w": 960,
+  "h": 540,
+  "note": "Title → Space → the climb starts; holding → trots the yak along the trail, and it munches the first tuft.",
+  "steps": [
+    { "waitFor": "window.__yak && window.__yak.scene() === 'title'", "ms": 8000, "label": "the title is up" },
+    { "key": "Space" },
+    { "waitFor": "window.__yak.scene() === 'play' && !window.__yak.game.director.tr", "ms": 4000, "label": "Space starts the climb" },
+    { "down": "ArrowRight" },
+    { "waitFor": "window.__yak.run().x > 120", "ms": 4000, "label": "→ trots the yak right" },
+    { "shot": "01-trot.png" },
+    { "waitFor": "window.__yak.run().tufts === 1", "ms": 4000, "label": "it munches the first tuft on the way" },
+    { "up": "ArrowRight" },
+    { "shot": "02-munch.png" }
+  ]
+}

@@ -9,6 +9,7 @@ import { LessonsView } from './views/lessons.js';
 import { ProjectsView } from './views/projects.js';
 import { IdeasView } from './views/ideas.js';
 import { ClipsView } from './views/clips.js';
+import { DesignsView } from './views/designs.js';
 import { openRequestDialog } from './request-dialog.js';
 import { showHelp } from './help.js';
 import { requestPrompt } from './prompts.js';
@@ -26,6 +27,7 @@ const NAV = [
   ['projects', 'Games', 'projects', 'All games, their stage, new game (4)'],
   ['ideas', 'Ideas', 'ideas', 'Game ideas backlog (5)'],
   ['clips', 'Clips', 'film', 'Promo videos of this game: watch, change the words, re-render'],
+  ['designs', 'Designs', 'designs', 'The design library: art, sound and game design files (6)'],
 ];
 
 class App {
@@ -82,7 +84,7 @@ class App {
     this.sizes = this.info.sizes;
     this.buildShell();
     await Promise.all([this.reloadProjects(), this.reloadStyles(), this.reloadDesigns()]);
-    this.views = { art: new ArtView(this), inbox: new InboxView(this), lessons: new LessonsView(this), projects: new ProjectsView(this), ideas: new IdeasView(this), clips: new ClipsView(this) };
+    this.views = { art: new ArtView(this), inbox: new InboxView(this), lessons: new LessonsView(this), projects: new ProjectsView(this), ideas: new IdeasView(this), clips: new ClipsView(this), designs: new DesignsView(this) };
     mount(this.content, Object.values(this.views).map((v) => v.el));
     await this.reloadRequests();
     for (const id of await api.game.running().catch(() => [])) this.running.add(id);
@@ -332,6 +334,7 @@ class App {
     if (kinds.has('styles')) { await this.reloadStyles(); this.updateCounts(); this.views.lessons.refresh(); }
     if (kinds.has('ideas')) this.views.ideas.refresh();
     if (kinds.has('designs')) await this.reloadDesigns();
+    if (kinds.has('designs') || kinds.has('projects')) this.views.designs.refresh();
     await this.views.art.onFsChange(changes);
     if (kinds.has('code') || kinds.has('edits')) this.views.projects.render();
   }
@@ -349,7 +352,7 @@ class App {
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
     if (e.ctrlKey || e.altKey || e.metaKey) return;
     if (this.view !== 'art' || !this.views.art.session) {
-      const idx = ['1', '2', '3', '4', '5'].indexOf(e.key);
+      const idx = ['1', '2', '3', '4', '5', '6'].indexOf(e.key);
       if (idx >= 0) this.go(NAV[idx][0]);
     }
   }

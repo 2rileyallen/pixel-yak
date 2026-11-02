@@ -8,7 +8,7 @@ import { DIRS, ROOT, EDITS, assertId, isId, within, str, nowIso, readJson, write
 import { normalizeProject, getProject, SIZES } from './games.mjs';
 import { readAllEdits } from './edits.mjs';
 import { createRequest } from './requests.mjs';
-import { findDesign } from './designs.mjs';
+import { copyDesign } from './designs.mjs';
 
 const TEXT = new Set(['.md', '.js', '.mjs', '.cjs', '.json', '.html', '.css', '.txt']);
 
@@ -23,30 +23,6 @@ async function listFiles(dir, base = dir) {
 }
 
 const fill = (text, vars) => text.replace(/\{\{([A-Z]+)\}\}/g, (m, k) => (k in vars ? vars[k] : m));
-
-// Copy a library entry into the game's design/ folder: DESIGN.md becomes <shelf>.md, its code
-// twins (palette.js, instruments.js, parts/ …) come along. Returns the files written.
-async function copyDesign(gameDir, shelf, id, date) {
-  const hit = findDesign(shelf, id);
-  if (!hit) throw new Error(`no design "${id}" on the ${shelf} shelf (designs/${shelf}/ or local/designs/${shelf}/)`);
-  const written = [];
-  for (const rel of await listFiles(hit.dir)) {
-    if (/\.(png|jpe?g|gif|webp)$/i.test(rel)) continue; // pictures stay in the library
-    const to = rel === 'DESIGN.md' ? `${shelf}.md` : rel;
-    let data = await fs.readFile(path.join(hit.dir, rel));
-    if (rel === 'DESIGN.md') {
-      const lines = data.toString('utf8').split(/\r?\n/);
-      const at = Math.max(0, lines.findIndex((l) => /^#\s/.test(l)) + 1);
-      lines.splice(at, 0, '', `> This game's own copy, started from \`designs/${shelf}/${id}\` (${hit.source}) on ${date}. It grows with the game; promote it back to the library when it's worth reusing (skill design).`);
-      data = Buffer.from(lines.join('\n'), 'utf8');
-    }
-    const file = within(path.join(gameDir, 'design'), to);
-    await fs.mkdir(path.dirname(file), { recursive: true });
-    await fs.writeFile(file, data);
-    written.push(`design/${to.split(path.sep).join('/')}`);
-  }
-  return written;
-}
 
 // opts: { id, name, genre, size, pitch, idea, resolution {width,height,pixelScale},
 //         designs: { art, sound, game } (library ids), template: 'blank' }

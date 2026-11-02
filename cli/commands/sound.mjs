@@ -20,6 +20,8 @@ export async function loadSound(pid) {
   const info = await D.soundInfo(pid);
   if (!info.hasModule) fail(`${info.moduleRel} doesn't exist — this game has no sound yet (skill sound)`);
   let mod;
+  // the engine's console notes (drift, unknown instruments) are printed by these commands in context
+  console.warn = () => {};
   try { mod = await import(pathToFileURL(info.module).href + `?t=${Date.now()}`); }
   catch (err) { fail(`${info.moduleRel} failed to load: ${err.message}`); }
   const S = mod.SOUND;
@@ -121,6 +123,8 @@ export async function checkSound(pid) {
   const info = await D.soundInfo(pid);
   if (!info.hasModule) return { lines, errors };
   let S;
+  const warn = console.warn;
+  console.warn = () => {}; // reported below, in context
   try { S = (await import(pathToFileURL(info.module).href + `?t=${Date.now()}`)).SOUND; }
   catch (err) { return { lines: [...lines, `ERROR ${info.moduleRel} failed to load: ${err.message.split('\n')[0]}`], errors: errors + 1 }; }
   if (!S || S.runtime !== SOUND_RUNTIME) return { lines: [...lines, `ERROR ${info.moduleRel} must export SOUND = defineSound({…})`], errors: errors + 1 };
@@ -141,6 +145,7 @@ export async function checkSound(pid) {
   }
   for (const d of S.report.drift) lines.push(`WARN  drift: ${d} changed after the user edited it — check it in the Sound view`);
   for (const o of S.report.orphans) lines.push(`WARN  a user sound edit points at ${o}, which no longer exists`);
+  console.warn = warn;
   lines.unshift(`sound: ${plural(Object.keys(S.songs).length, 'song')} · ${plural(Object.keys(S.sfx).length, 'sound effect')}${n ? ' — each renders without NaN or silence' : ''}`);
   return { lines, errors };
 }
@@ -164,7 +169,7 @@ export const commands = {
       }
       if (!Object.keys(S.base.sfx).length) out('  (none)');
       out(`\nInstruments: ${Object.keys(S.base.instruments).map((id) => instLabel(S, id)).join(', ')}`);
-      if (edits.instruments) out(`The user's knobs (every song): ${Object.entries(edits.instruments.instruments || {}).map(([id, ie]) => Object.entries(ie.set).map(([k, v]) => `${id}.${k} ${v} (yours ${ie.base ? ie.base[k] : '?'})`).join(', ')).join('; ')}`);
+      if (edits.instruments) out(`The user's knobs (every song): ${Object.entries(edits.instruments.instruments || {}).map(([id, ie]) => Object.entries(ie.set).map(([k, v]) => `${id}.${k} ${v} (yours ${S.base.instruments[id] ? S.base.instruments[id][k] ?? 'default' : '?'}${S.report.drift.includes(`instrument ${id}.${k}`) ? ', you changed it after they set theirs' : ''})`).join(', ')).join('; ')}`);
       for (const o of S.report.orphans) out(`WARN a user edit points at ${o}, which no longer exists`);
       for (const x of edits.invalid) out(`ERROR ${x.file}: ${x.errors.join('; ')}`);
       const ls = await D.soundLessonSummary(p.id);

@@ -1,7 +1,7 @@
 // tools/clip.cjs — the clip recorder (docs/contracts/CLIPS.md, skill promo): films a promo clip of a
 // game from its recipe, games/<id>/clips/<name>.clip.json, into an MP4.
 //
-//   <electron> tools/clip.cjs <game> <clip> [--probe] [--ref <rev>] [--music-file <wav>] [--keep]
+//   <electron> tools/clip.cjs <game> <clip> [--probe] [--ref <rev>] [--music-file <wav>] [--cancel-file <path>] [--keep]
 //   (usually through `node cli/yak.mjs clip <game> <clip> [--probe]` or the studio's Clips view)
 //
 // 1. A clean copy of a COMMITTED version, never the working tree (another agent may be mid-edit):
@@ -21,7 +21,8 @@
 // Output: games/<id>/clips/out/<out>.mp4 + <name>.json (what was filmed), also copied into the
 // folder named by local/clips.json { "copyTo": … } when set. Progress: one `CLIP {json}` line per step
 // on stdout. ffmpeg: the FFMPEG environment variable (the program or its folder), else `ffmpeg` on the
-// PATH. A line "cancel" on stdin stops the run and removes everything it made.
+// PATH. --cancel-file: when that file appears the run stops and removes what it made (the studio's
+// Cancel; stdin doesn't reach an Electron main process on Windows).
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -46,7 +47,12 @@ const [GAME, NAME] = pos;
 const PROBE = !!opt.probe;
 const REF = typeof opt.ref === 'string' ? opt.ref : 'HEAD';
 
-// Everything this run makes outside the game's clips/out/ lives in one temp folder, removed at the end.
+// Everything this run makes outside the game's clips/out/ lives in one temp folder, removed at the end
+// (the browser profile stays locked until the process is gone: earlier runs' leftovers are swept here).
+for (const n of fs.readdirSync(os.tmpdir()).filter((f) => f.startsWith('pixel-yak-clip-'))) {
+  const p = path.join(os.tmpdir(), n);
+  try { if (Date.now() - fs.statSync(p).mtimeMs > 3 * 3600 * 1000) fs.rmSync(p, { recursive: true, force: true }); } catch {}
+}
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'pixel-yak-clip-'));
 const SRC = path.join(TMP, 'src'), WORK = path.join(TMP, 'work');
 fs.mkdirSync(WORK, { recursive: true });
@@ -73,19 +79,16 @@ function fail(msg) {
   app.exit(1);
 }
 
-// "cancel" on stdin (the studio's Cancel button) stops the run cleanly.
-if (!process.stdin.isTTY) {
-  try {
-    process.stdin.setEncoding('utf8');
-    process.stdin.on('data', (d) => {
-      if (!/cancel/.test(d) || cancelled) return;
-      cancelled = true;
-      emit({ cancelled: true });
-      cleanup();
-      app.exit(2);
-    });
-    process.stdin.on('error', () => {});
-  } catch { /* no stdin: Ctrl+C still works */ }
+// The studio's Cancel button: it creates the --cancel-file, the run stops and cleans up.
+if (typeof opt['cancel-file'] === 'string') {
+  const flag = path.resolve(opt['cancel-file']);
+  setInterval(() => {
+    if (cancelled || !fs.existsSync(flag)) return;
+    cancelled = true;
+    emit({ cancelled: true });
+    cleanup();
+    app.exit(2);
+  }, 200);
 }
 
 // ------------------------------------------------------------------- git ---
@@ -121,9 +124,9 @@ function makeCopy() {
   const gameDir = path.join(ROOT, 'games', GAME);
   const dest = path.join(SRC, 'games', GAME);
   let repo, paths, base, status;
-  if (fs.existsSync(path.join(gameDir, '.git'))) { repo = gameDir; paths = []; base = dest; status = git(gameDir, ['status', '--porcelain']); }
+  if (fs.existsSync(path.join(gameDir, '.git'))) { repo = gameDir; paths = []; base = dest; status = git(gameDir, ['status', '--porcelain', '--', '.', ':(exclude)clips', ':(exclude)requests']); }
   else if (harnessCommit && git(ROOT, ['ls-files', '--', `games/${GAME}/game.json`])) {
-    repo = ROOT; paths = [`games/${GAME}`]; base = SRC; status = git(ROOT, ['status', '--porcelain', '--', `games/${GAME}`]);
+    repo = ROOT; paths = [`games/${GAME}`]; base = SRC; status = git(ROOT, ['status', '--porcelain', '--', `games/${GAME}`, `:(exclude)games/${GAME}/clips`, `:(exclude)games/${GAME}/requests`]);
   } else {
     throw new Error(`games/${GAME} has no commit to film. The recorder films a committed version, never the files as they are mid-edit. ` +
       `Make the game its own git repo and commit it: git -C games/${GAME} init && git -C games/${GAME} add -A && git -C games/${GAME} commit -m "First version"`);
@@ -133,6 +136,7 @@ function makeCopy() {
   const subject = git(repo, ['log', '-1', '--format=%s', commit]) || '';
   archive(repo, commit, paths, base);
   if (!fs.existsSync(path.join(dest, 'game.json'))) throw new Error(`the commit ${commit} has no games/${GAME}/game.json`);
+  // (clips/ and requests/ don't count: recipes and shot scripts are read as they are now, tickets aren't the game)
   if (status) note(`games/${GAME} has uncommitted changes: they are not in this clip (it films commit ${commit} "${subject.slice(0, 60)}")`);
   // the recorder's own overlay, next to the engine it imports
   fs.mkdirSync(path.join(SRC, 'tools'), { recursive: true });
@@ -334,11 +338,11 @@ app.whenReady().then(async () => {
 
   const out = path.join(outDir, clip.out);
   fs.copyFileSync(part, out);
-  const probe = probeFile(out);
+  const media = probeFile(out);
   const info = {
     at: new Date().toISOString(), out: relRoot(out), seconds: clip.length, fps: clip.fps, frames: written, frame: [plan.outW, plan.outH],
     window: [size.width, size.height], game: copy.game, harness: copy.harness, music: music ? { song: music.song, from: music.from } : null,
-    probe, bytes: fs.statSync(out).size, consoleErrors: logs.filter((l) => l.startsWith('[error')).length, shot, notes,
+    media, bytes: fs.statSync(out).size, consoleErrors: logs.filter((l) => l.startsWith('[error')).length, shot, notes,
   };
   const settings = await D.clipSettings();
   if (settings.copyTo) {

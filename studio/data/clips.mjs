@@ -123,6 +123,7 @@ export async function listClips(pid) {
   const out = [];
   for (const name of names.sort()) {
     const raw = await readJson(path.join(dir, `${name}.clip.json`));
+    const rst = await statOrNull(path.join(dir, `${name}.clip.json`));
     const clip = normalizeClip(name, raw);
     const mp4 = path.join(clipOutDir(pid), clip.out);
     const st = await statOrNull(mp4);
@@ -134,6 +135,7 @@ export async function listClips(pid) {
     out.push({
       name, clip, valid: !!raw,
       file: relRepo(path.join(dir, `${name}.clip.json`)),
+      changedAt: rst ? rst.mtime.toISOString() : null, // the recipe's last change (newer than the render: re-render to see it)
       shotFile: clip.shot ? relRepo(path.join(dir, clip.shot)) : null,
       render: st ? { mp4: relRepo(mp4), at: st.mtime.toISOString(), bytes: st.size, info: info || null } : null,
       probe: stills.length ? { stills, at: (probeInfo && probeInfo.at) || null } : null,
@@ -228,13 +230,14 @@ export async function listClipSongs(pid, D) {
 }
 
 // ---------------------------------------------------------------- recorder ---
-// How to run the recorder: `<electron> tools/clip.cjs <game> <name> [--probe] [--ref <rev>] [--music-file <wav>]`.
+// How to run the recorder: `<electron> tools/clip.cjs <game> <name> [--probe] [--ref <rev>] [--music-file <wav>] [--cancel-file <path>]`.
 // It prints one `CLIP {json}` line per step (parseClipLine reads them).
-export function recorderArgs(pid, name, { probe = false, ref = null, musicFile = null } = {}) {
+export function recorderArgs(pid, name, { probe = false, ref = null, musicFile = null, cancelFile = null } = {}) {
   const args = [path.join(ROOT, 'tools', 'clip.cjs'), pid, assertClipName(name)];
   if (probe) args.push('--probe');
   if (ref) args.push('--ref', String(ref));
   if (musicFile) args.push('--music-file', path.resolve(String(musicFile)));
+  if (cancelFile) args.push('--cancel-file', String(cancelFile));
   return args;
 }
 export function parseClipLine(line) {

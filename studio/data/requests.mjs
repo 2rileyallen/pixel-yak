@@ -4,7 +4,7 @@ import path from 'node:path';
 import { DIRS, assertId, isId, within, str, nowIso, readJson, markWrite, writeJsonMarked, exists } from './core.mjs';
 import { projectDir } from './games.mjs';
 
-export const REQUEST_KINDS = ['art', 'frames', 'animation', 'audio', 'gameplay', 'level', 'story', 'bug', 'style', 'kickoff', 'review', 'studio', 'other'];
+export const REQUEST_KINDS = ['art', 'frames', 'animation', 'audio', 'gameplay', 'level', 'story', 'bug', 'style', 'design', 'tuning', 'promo', 'kickoff', 'review', 'studio', 'other'];
 export const REQUEST_STATUS = ['open', 'in-progress', 'done', 'wontfix'];
 // scope: a game id, or '_studio' for requests about Pixel Yak itself (local/inbox/).
 // Closed requests can be moved to <dir>/archive/ (archiveRequests) so the live folder stays

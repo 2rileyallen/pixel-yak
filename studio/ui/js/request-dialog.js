@@ -6,7 +6,8 @@ import { requestPrompt } from './prompts.js';
 
 const KIND_LABEL = {
   art: 'Art — fix or redraw', frames: 'Frames — add / in-betweens', animation: 'Animation — timing or motion', audio: 'Audio / music',
-  gameplay: 'Gameplay / feel', level: 'Level / map layout', story: 'Story / dialogue', bug: 'Bug', style: 'Art style (whole style)',
+  gameplay: 'Gameplay / feel', level: 'Level / map layout', story: 'Story / dialogue', bug: 'Bug', style: 'The game's whole look',
+  design: 'Design file (art / sound / game)', tuning: 'Tuning — try variants (F8)', promo: 'Promo clip / video', kickoff: 'Kickoff (new game)',
   review: 'Review / approval', studio: 'Pixel Yak itself', other: 'Other',
 };
 

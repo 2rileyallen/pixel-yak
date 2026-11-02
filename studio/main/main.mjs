@@ -16,7 +16,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import os from 'node:os';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as D from '../data/index.mjs';
 import { createWatcher } from './watch.mjs';
 
@@ -50,7 +50,8 @@ const MIME = {
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.md': 'text/markdown; charset=utf-8',
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.webp': 'image/webp',
   '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8', '.wasm': 'application/wasm',
-  '.woff2': 'font/woff2', '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg',
+  '.woff2': 'font/woff2', '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.mid': 'audio/midi',
+  '.mp4': 'video/mp4', '.webm': 'video/webm',
 };
 
 function servePath(rel) {
@@ -365,6 +366,16 @@ function registerIpc() {
   });
 }
 
+// Feature modules add their own IPC without touching this file: studio/main/ipc-<feature>.mjs
+// exports register(ctx), called once at startup with the helpers below.
+async function registerFeatureIpc() {
+  const ctx = { handle, D, ROOT, games, toStudio, launchGame, CAPTURE, app, studioWindow: () => studioWin };
+  for (const f of fs.readdirSync(HERE).filter((n) => /^ipc-[a-z0-9-]+\.mjs$/.test(n)).sort()) {
+    const m = await import(pathToFileURL(path.join(HERE, f)).href);
+    await m.register(ctx);
+  }
+}
+
 // ----------------------------------------------------------------- capture ---
 const captureLog = [];
 async function runCapture() {
@@ -435,6 +446,7 @@ if (!CAPTURE && !app.requestSingleInstanceLock()) {
     ]));
     await refreshProjectCache();
     registerIpc();
+    await registerFeatureIpc();
     startWatchers();
     createStudioWindow();
     if (CAPTURE) runCapture().catch((err) => { console.error(err); app.exit(1); });

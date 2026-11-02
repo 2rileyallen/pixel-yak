@@ -14,3 +14,5 @@ games/*/dev/out/
 *.log
 # agent worktrees (Claude Code)
 .claude/worktrees/
+# parallel agent worktrees
+.worktrees/

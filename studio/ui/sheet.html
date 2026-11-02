@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pixel Yak contact sheet</title>
+<style>
+  body { margin: 0; background: #0d0f1d; color: #c9cbe0; font: 12px 'Segoe UI', sans-serif; }
+  .asset { padding: 8px 12px 10px; border-bottom: 1px solid #222846; }
+  h3 { margin: 0 0 6px; font-size: 13px; color: #fff; }
+  h3 span { color: #6d739a; font-weight: 400; }
+  h3 b { color: #f4c443; font-weight: 600; font-size: 11px; margin-left: 6px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 3px; background: #171a2e; padding: 5px; border: 1px solid #222846; }
+  .cell.edited { border-color: #f4c443; }
+  .cell.added { border-color: #3acbc9; }
+  .cell small { color: #a6abcc; font-family: Consolas, monospace; font-size: 10.5px; }
+  .lab { font-size: 9.5px; color: #6d739a; text-transform: uppercase; letter-spacing: .05em; }
+  canvas { image-rendering: pixelated; display: block; }
+  .err { color: #ff8f88; font-family: Consolas, monospace; white-space: pre-wrap; padding: 12px; }
+  .pagehead { padding: 6px 12px; color: #f4c443; font-weight: 600; font-size: 12px; border-bottom: 1px solid #222846; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="./js/sheet.js"></script>
+</body>
+</html>

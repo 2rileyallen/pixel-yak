@@ -1,0 +1,16 @@
+# dependencies and tool state
+node_modules/
+.wrangler/
+# scratch work: captures, tool pictures, clips in progress (never committed)
+scratch/
+# your private profile: ideas, requests about Pixel Yak itself, your own design files, brand (a separate private repo, if you like)
+local/
+# games are their own repos, cloned into games/ — except the bundled demo
+games/*
+!games/yak-trail/
+# capture-test output (tools/run-captures.mjs)
+games/*/dev/out/
+# logs
+*.log
+# agent worktrees (Claude Code)
+.claude/worktrees/

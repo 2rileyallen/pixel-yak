@@ -1,0 +1,11 @@
+{
+  "page": "games/{{ID}}/game/index.html",
+  "w": 960,
+  "h": 540,
+  "note": "The game boots and draws. One capture test per feature: waitFor instead of fixed waits, expect for state (docs/contracts/CAPTURE-TESTS.md); look at the screenshots of what you changed.",
+  "steps": [
+    { "waitFor": "typeof window.__studioMoment === 'function' && window.__studioMoment().tick > 2", "ms": 8000, "label": "the game is running" },
+    { "expect": "window.__studioMoment().scene", "equals": "placeholder", "label": "the placeholder scene is up" },
+    { "shot": "01-boot.png" }
+  ]
+}

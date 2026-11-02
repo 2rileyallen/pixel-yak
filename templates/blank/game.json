@@ -1,0 +1,14 @@
+{
+  "id": "{{ID}}",
+  "name": "{{NAME}}",
+  "genre": "{{GENRE}}",
+  "size": "{{SIZE}}",
+  "stage": 1,
+  "status": "active",
+  "resolution": { "width": {{W}}, "height": {{H}}, "pixelScale": {{SCALE}} },
+  "entry": "game/index.html",
+  "assets": "assets.js",
+  "edits": "game/art/edits",
+  "designs": {},
+  "engine": "1"
+}

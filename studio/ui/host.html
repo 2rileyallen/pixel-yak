@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pixel Yak project host</title>
+</head>
+<body>
+<!-- Runs one project's art code in its own origin (studio://host-<project>) so projects never
+     share modules or globals. The studio talks to it with postMessage (see js/host.js). -->
+<script type="module" src="./js/host-runtime.js"></script>
+</body>
+</html>

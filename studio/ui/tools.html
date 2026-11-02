@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pixel Yak tools</title>
+<style>
+  body { margin: 0; background: #0d0f1d; color: #c9cbe0; font: 12px 'Segoe UI', sans-serif; padding: 10px; }
+  h3 { margin: 0 0 8px; font-size: 13px; color: #fff; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 3px; background: #171a2e; padding: 6px; border: 1px solid #222846; }
+  .cell b { font-family: Consolas, monospace; font-size: 11px; color: #fff; font-weight: 600; }
+  .cell span { font-size: 10px; color: #8a90b8; text-transform: uppercase; letter-spacing: .05em; }
+  .pair { display: flex; gap: 4px; align-items: center; }
+  canvas { image-rendering: pixelated; display: block; background: #222846; }
+  .err { color: #ff8f88; font-family: Consolas, monospace; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<!-- Used by `node cli/yak.mjs context|propagate` through tools/capture.cjs (file://):
+     prints TOOLRESULT <json> to the console and draws a picture for the model to look at. -->
+<script type="module" src="./js/tools.js"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pixel Yak art check</title>
+<style>
+  body { margin: 0; background: #0d0f1d; color: #c9cbe0; font: 12px Consolas, monospace; padding: 10px; white-space: pre-wrap; }
+  .err { color: #ff8f88; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<!-- Used by `node cli/yak.mjs check <project>` through tools/capture.cjs (file://):
+     loads the project's art registry, renders every id/pose with the user's edits applied and
+     prints TOOLRESULT <json> with what doesn't resolve at its declared size. -->
+<script type="module" src="./js/check.js"></script>
+</body>
+</html>

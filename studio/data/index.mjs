@@ -10,3 +10,4 @@ export * from './designs.mjs';
 export * from './scaffold.mjs';
 export * from './tuning.mjs';
 export * from './moments.mjs';
+export * from './clips.mjs';

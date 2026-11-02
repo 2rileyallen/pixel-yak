@@ -61,9 +61,18 @@ contextBridge.exposeInMainWorld('studio', {
   shell: { open: (rel, reveal) => call('shell:open', rel, !!reveal) },
   // engine/link: an F9 moment's save-state goes next to the request it opened (studio/main/ipc-link.mjs)
   link: { attachMoment: (momentId, scope, requestId) => call('link:attach-moment', momentId, scope, requestId) },
+  clips: {
+    list: (pid) => call('clips:list', pid),
+    save: (pid, name, patch) => call('clips:save', pid, name, patch),
+    songs: (pid) => call('clips:songs', pid),
+    render: (pid, name, opts) => call('clips:render', pid, name, opts || {}),
+    cancel: () => call('clips:cancel'),
+    job: () => call('clips:job'),
+  },
   onFsChanged: on('fs:changed'),
   onGameStatus: on('game:status'),
   onGameMoment: on('game:moment'),
   onGameConsole: on('game:console'),
   onLinkKept: on('link:kept'),
+  onClipProgress: on('clips:progress'),
 });

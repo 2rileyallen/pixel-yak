@@ -8,8 +8,9 @@ local/
 # games are their own repos, cloned into games/ — except the bundled demo
 games/*
 !games/yak-trail/
-# capture-test output (tools/run-captures.mjs)
+# capture-test output (tools/run-captures.mjs) and rendered clips (tools/clip.cjs)
 games/*/dev/out/
+games/*/clips/out/
 # logs
 *.log
 # agent worktrees (Claude Code)

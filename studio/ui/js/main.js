@@ -8,6 +8,7 @@ import { InboxView } from './views/inbox.js';
 import { LessonsView } from './views/lessons.js';
 import { ProjectsView } from './views/projects.js';
 import { IdeasView } from './views/ideas.js';
+import { ClipsView } from './views/clips.js';
 import { openRequestDialog } from './request-dialog.js';
 import { showHelp } from './help.js';
 import { requestPrompt } from './prompts.js';
@@ -24,6 +25,7 @@ const NAV = [
   ['lessons', 'Lessons', 'lessons', 'What the AI is learning from your edits (3)'],
   ['projects', 'Games', 'projects', 'All games, their stage, new game (4)'],
   ['ideas', 'Ideas', 'ideas', 'Game ideas backlog (5)'],
+  ['clips', 'Clips', 'film', 'Promo videos of this game: watch, change the words, re-render'],
 ];
 
 class App {
@@ -80,7 +82,7 @@ class App {
     this.sizes = this.info.sizes;
     this.buildShell();
     await Promise.all([this.reloadProjects(), this.reloadStyles(), this.reloadDesigns()]);
-    this.views = { art: new ArtView(this), inbox: new InboxView(this), lessons: new LessonsView(this), projects: new ProjectsView(this), ideas: new IdeasView(this) };
+    this.views = { art: new ArtView(this), inbox: new InboxView(this), lessons: new LessonsView(this), projects: new ProjectsView(this), ideas: new IdeasView(this), clips: new ClipsView(this) };
     mount(this.content, Object.values(this.views).map((v) => v.el));
     await this.reloadRequests();
     for (const id of await api.game.running().catch(() => [])) this.running.add(id);
@@ -188,6 +190,7 @@ class App {
       this.views.art.setProject(p, this.host),
       this.views.inbox.setProject(p),
       this.views.lessons.setProject(p),
+      this.views.clips.setProject(p),
     ]);
     this.views.projects.render();
   }
@@ -303,7 +306,7 @@ class App {
   async onFs(changes) {
     if (window.__fsLog) window.__fsLog.push(JSON.parse(JSON.stringify(changes)));
     this.lastChange = Date.now();
-    const LABEL = { code: 'Code changed', docs: 'Docs changed', edits: 'Pixel edits changed', requests: 'Requests changed', styles: 'A game look / lessons changed', designs: 'Design library changed', ideas: 'Ideas changed', projects: 'Games changed' };
+    const LABEL = { code: 'Code changed', docs: 'Docs changed', edits: 'Pixel edits changed', requests: 'Requests changed', styles: 'A game look / lessons changed', designs: 'Design library changed', ideas: 'Ideas changed', projects: 'Games changed', clips: 'Clips changed' };
     for (const c of changes) {
       if (!LABEL[c.kind]) continue;
       const files = (c.files && c.files.length ? c.files : [c.file]).filter(Boolean);

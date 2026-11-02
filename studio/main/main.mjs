@@ -89,6 +89,7 @@ async function handleProtocol(req) {
   try {
     let st = await fsp.stat(abs);
     if (st.isDirectory()) { abs = path.join(abs, 'index.html'); st = await fsp.stat(abs); }
+    if (RANGED.has(path.extname(abs).toLowerCase())) return await serveMedia(req, abs, st);
     const data = await fsp.readFile(abs);
     return new Response(data, {
       status: 200,
@@ -97,6 +98,23 @@ async function handleProtocol(req) {
   } catch {
     return new Response(`not found: ${rel}`, { status: 404 });
   }
+}
+
+// Video and audio answer byte ranges: Chromium asks for them, and a <video> can only seek with them.
+const RANGED = new Set(['.mp4', '.webm', '.wav', '.mp3', '.ogg']);
+async function serveMedia(req, abs, st) {
+  const headers = { 'content-type': MIME[path.extname(abs).toLowerCase()], 'cache-control': 'no-store', 'accept-ranges': 'bytes' };
+  const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.get('range') || '');
+  if (!m || (!m[1] && !m[2])) return new Response(await fsp.readFile(abs), { status: 200, headers: { ...headers, 'content-length': String(st.size) } });
+  const start = m[1] ? Number(m[1]) : Math.max(0, st.size - Number(m[2]));
+  const end = m[1] && m[2] ? Math.min(Number(m[2]), st.size - 1) : st.size - 1;
+  if (start >= st.size || start > end) return new Response(null, { status: 416, headers: { ...headers, 'content-range': `bytes */${st.size}` } });
+  const fh = await fsp.open(abs, 'r');
+  try {
+    const buf = Buffer.alloc(end - start + 1);
+    await fh.read(buf, 0, buf.length, start);
+    return new Response(buf, { status: 206, headers: { ...headers, 'content-range': `bytes ${start}-${end}/${st.size}`, 'content-length': String(buf.length) } });
+  } finally { await fh.close(); }
 }
 
 // ----------------------------------------------------------------- windows ---
@@ -280,6 +298,7 @@ function classify(top, rel) {
   if (parts.length === 1 || (parts.length === 2 && parts[1] === 'game.json')) return { kind: 'projects', project, file };
   if (parts[1] === 'requests') return { kind: 'requests', project, file };
   if (parts[1] === 'tuning') return { kind: 'tuning', project, file }; // F8 choices kept (studio/main/ipc-link.mjs)
+  if (parts[1] === 'clips') return { kind: 'clips', project, file }; // recipes, shot scripts, renders (the Clips view)
   if (parts[1] === 'dev' && parts[2] === 'out') return null;
   // the game's own look: design/*.md + lessons → the Lessons view; design/*.js is art code (the palette)
   if (parts[1] === 'design') return ['.js', '.mjs'].includes(ext) ? { kind: 'code', project, file } : { kind: 'styles', style: project, project, file };

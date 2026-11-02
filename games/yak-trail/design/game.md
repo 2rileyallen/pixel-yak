@@ -20,9 +20,15 @@ small rocks, the most tufts), the **rocks** (steeper, ledges, gaps, a staircase 
 first climb two or three. The trail is data: `game/level.js` `COURSE`.
 
 ## Feel (sim.js `TUNE`)
-Top trot speed 1.6 px a tick, a hop about 42 px high (a tap hops lower), a little forgiveness both
+Top trot speed 1.6 px a tick, a held hop about 40 px high (a tap hops lower), a little forgiveness both
 ways (a hop pressed just before landing, or just after walking off an edge, still counts). Slopes are
-trotted; anything that rises suddenly by more than a stride is a wall and takes a hop.
+trotted; anything that rises suddenly by more than a stride is a wall and takes a hop. In the studio
+(or with `?tune=1`), F8 slides **Trot speed** and **Hop height** live and flips **Trail music** between
+two arrangements; what the user keeps waits in `tuning/` to be built into `TUNE`.
+
+## Sound
+A gentle folk walking tune on the title and the climb, a short fanfare at the flags, and a little
+sound for every hop, landing, munch, cairn and fall. Details: `design/sound.md`.
 
 ## Pillars
 - **Charm first**: the yak is the star; everything it does should look nice.
@@ -35,4 +41,5 @@ play is only in Esc → Help (#2). The title shows the best run.
 
 ## Controls
 Arrows or A/D (or the stick, the d-pad) trot; Space, ↑ or W (pad A) hops; Esc (pad Menu) pauses;
-Enter or Space confirms in menus. Pause freezes everything.
+Enter or Space confirms in menus. Pause freezes everything (the music drops to a murmur). The first
+key or click starts the sound (browsers need one). In the studio: F8 tunes, F9 reports a moment.

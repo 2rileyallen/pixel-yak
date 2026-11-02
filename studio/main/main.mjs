@@ -7,7 +7,8 @@
 // - Watches games/, designs/, local/ and engine/ and pushes changes to the UI:
 //   new games, new assets and new requests appear without a restart.
 // - Game windows get studio edits live (window.studioLink) and F9 sends the current moment
-//   (screenshot + console) to the studio as a request draft.
+//   (screenshot + console, + state, save-state and the last seconds from engine/link) to the
+//   studio as a request draft. F8 tuning lives in engine/link + studio/main/ipc-link.mjs.
 // - `electron . --capture=<steps.json> --out=<dir>` drives the studio headless and saves
 //   screenshots (the look-at-your-work loop for the studio itself, see docs/STUDIO.md).
 
@@ -162,7 +163,7 @@ async function launchGame(projectId) {
   const { width, height, pixelScale } = p.resolution;
   const win = new BrowserWindow({
     width: width * pixelScale, height: height * pixelScale, useContentSize: true,
-    title: `${p.name} — Pixel Yak (F9: tell the AI about this moment · F5: restart)`,
+    title: `${p.name} — Pixel Yak (F8: tune · F9: tell the AI about this moment · F5: restart)`,
     icon: ICON, backgroundColor: '#05040a', autoHideMenuBar: true, show: !CAPTURE,
     webPreferences: {
       preload: path.join(HERE, 'game-preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true,
@@ -191,23 +192,19 @@ async function launchGame(projectId) {
   return { running: true };
 }
 
+// Feature modules add to an F9 moment: onMoment(async (projectId, win, moment) => ({ …more }))
+// (studio/main/ipc-link.mjs: the game's state, a save-state and the last ~5 seconds).
+const momentParts = [];
 async function captureMoment(projectId) {
   const g = games.get(projectId);
   if (!g || g.win.isDestroyed()) throw new Error('game is not running');
+  const at = new Date().toISOString();
   const img = await g.win.webContents.capturePage();
-  // Games may expose window.__studioMoment() → small JSON of where the player is.
-  let state = null;
-  try {
-    state = await Promise.race([
-      g.win.webContents.executeJavaScript('typeof window.__studioMoment === "function" ? JSON.stringify(window.__studioMoment()) : null', true),
-      new Promise((r) => setTimeout(() => r(null), 400)),
-    ]);
-  } catch {}
-  toStudio('game:moment', {
-    projectId, at: new Date().toISOString(), dataUrl: img.toDataURL(),
-    state: typeof state === 'string' ? state.slice(0, 4000) : null,
-    console: g.console.slice(-40),
-  });
+  const moment = { projectId, at, dataUrl: img.toDataURL(), state: null, console: g.console.slice(-40) };
+  for (const add of momentParts) {
+    try { Object.assign(moment, await add(projectId, g.win, moment)); } catch (err) { console.error('[studio] moment:', err.message); }
+  }
+  toStudio('game:moment', moment);
   if (studioWin && !studioWin.isDestroyed() && !CAPTURE) { studioWin.show(); studioWin.focus(); }
 }
 
@@ -282,6 +279,7 @@ function classify(top, rel) {
   if (!D.isId('project', project)) return null;
   if (parts.length === 1 || (parts.length === 2 && parts[1] === 'game.json')) return { kind: 'projects', project, file };
   if (parts[1] === 'requests') return { kind: 'requests', project, file };
+  if (parts[1] === 'tuning') return { kind: 'tuning', project, file }; // F8 choices kept (studio/main/ipc-link.mjs)
   if (parts[1] === 'dev' && parts[2] === 'out') return null;
   // the game's own look: design/*.md + lessons → the Lessons view; design/*.js is art code (the palette)
   if (parts[1] === 'design') return ['.js', '.mjs'].includes(ext) ? { kind: 'code', project, file } : { kind: 'styles', style: project, project, file };
@@ -369,7 +367,7 @@ function registerIpc() {
 // Feature modules add their own IPC without touching this file: studio/main/ipc-<feature>.mjs
 // exports register(ctx), called once at startup with the helpers below.
 async function registerFeatureIpc() {
-  const ctx = { handle, D, ROOT, games, toStudio, launchGame, CAPTURE, app, studioWindow: () => studioWin };
+  const ctx = { handle, D, ROOT, games, toStudio, launchGame, CAPTURE, app, studioWindow: () => studioWin, onMoment: (fn) => momentParts.push(fn) };
   for (const f of fs.readdirSync(HERE).filter((n) => /^ipc-[a-z0-9-]+\.mjs$/.test(n)).sort()) {
     const m = await import(pathToFileURL(path.join(HERE, f)).href);
     await m.register(ctx);

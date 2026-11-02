@@ -12,7 +12,7 @@ const KIND_LABEL = {
 };
 
 // opts: { scope, kind, tier, title, body, target: { asset, pose, anim, box }, targetThumb: canvas,
-//         attachments: [dataUrl], context: { state, console: [] }, assignee }
+//         attachments: [dataUrl], context: { head, state, console: [] }, assignee, onSaved(request) }
 export function openRequestDialog(app, opts = {}) {
   const projects = app.projects.filter((p) => p.status !== 'archived');
   let scope = opts.scope || (app.project && app.project.id) || '_studio';
@@ -48,6 +48,7 @@ export function openRequestDialog(app, opts = {}) {
 
   const ctx = opts.context || null;
   const ctxText = ctx ? [ctx.state ? `Game state: ${ctx.state}` : '', ctx.console && ctx.console.length ? `Recent game console:\n${ctx.console.slice(-25).join('\n')}` : ''].filter(Boolean).join('\n\n') : '';
+  const headText = ctx && ctx.head ? ctx.head : ''; // always kept: when it happened, what's attached (studio/ui/js/link.js)
   const includeCtx = h('input', { type: 'checkbox', checked: true });
 
   const m = modal({
@@ -69,7 +70,7 @@ export function openRequestDialog(app, opts = {}) {
           api.setBusy(true);
           const req = {
             title: title.value.trim(),
-            body: body.value.trim() + (ctxText && includeCtx.checked ? `\n\n---\n${ctxText}` : ''),
+            body: body.value.trim() + (headText || (ctxText && includeCtx.checked) ? `\n\n---\n${[headText, includeCtx.checked ? ctxText : ''].filter(Boolean).join('\n\n')}` : ''),
             kind: kind.value, tier: tier.value, assignee: who.value, target,
           };
           try {

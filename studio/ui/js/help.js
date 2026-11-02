@@ -30,7 +30,7 @@ export function showHelp() {
             h('li', null, h('b', null, 'Copy prompt'), ' and paste it into Claude Code (or any AI chat in this folder). The AI reads the inbox with the studio CLI and marks requests done.'),
             h('li', null, 'Requests the AI sends back to you (reviews, gate questions) show up as ', h('b', null, 'for you'), '.'),
             h('li', null, 'Pick the model: ', h('b', null, 'smart'), ' for new rigs, style learning and design; ', h('b', null, 'builder'), ' for frames from a pose table, content data and fixes.'),
-            h('li', null, 'While playing: ', h('span.kbd', null, 'F9'), ' sends the current moment (screenshot + console) to the studio, ', h('span.kbd', null, 'F5'), ' restarts the game.'))),
+            h('li', null, 'While playing: ', h('span.kbd', null, 'F8'), ' opens the tuning panel (feel the AI\'s alternatives live, Keep the one you like), ', h('span.kbd', null, 'F9'), ' sends the current moment (screenshot, the last few seconds, state, console and a save-state) to the studio, ', h('span.kbd', null, 'F5'), ' restarts the game.'))),
         h('div', null,
           h('h4', null, 'Frames & final art'),
           h('ul', null,

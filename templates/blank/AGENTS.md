@@ -21,6 +21,7 @@ instead of repeating them. Update **Now** whenever the focus changes.
 | `ENGINEERING.md` | Code map, how to run and check it | code work |
 | `game/` | The game: `main.js` boots it, `sprites.js` is the art contract, `art/` the generators, `art/edits/` the user's pixels (never hand-edit) | |
 | `requests/` | This game's tickets with the user | skill requests |
+| `tuning/` | F8 choices the user kept while playing, waiting to be built in (`node cli/yak.mjs tuning {{ID}}`) | after the user tunes (skill explore) |
 | `dev/` | Tests: `*.test.mjs` (node:test) and `tests/*.json` (capture tests) | checking your work |
 
 ## Check your work

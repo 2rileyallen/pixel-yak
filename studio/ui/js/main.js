@@ -11,6 +11,7 @@ import { IdeasView } from './views/ideas.js';
 import { openRequestDialog } from './request-dialog.js';
 import { showHelp } from './help.js';
 import { requestPrompt } from './prompts.js';
+import { initLink, openMoment } from './link.js';
 
 const api = window.studio;
 const ls = {
@@ -93,6 +94,7 @@ class App {
     api.onGameStatus(({ projectId, running }) => { if (running) this.running.add(projectId); else this.running.delete(projectId); this.renderPlay(); this.views.projects.render(); });
     api.onGameMoment((m) => this.onMoment(m));
     api.onGameConsole((c) => this.onGameConsole(c));
+    initLink(this); // F8 Keep toasts (studio/ui/js/link.js)
     setInterval(() => this.renderLive(), 20000);
     window.addEventListener('keydown', (e) => this.onKey(e));
     window.addEventListener('beforeunload', (e) => { if (this.views.art.dirtySessions().length) { e.preventDefault(); e.returnValue = ''; } });
@@ -264,7 +266,7 @@ class App {
     const run = p && this.running.has(p.id);
     this.playBtn.classList.toggle('running', !!run);
     this.playBtn.disabled = !p || !p.hasGame;
-    this.playBtn.title = !p ? '' : !p.hasGame ? `${p.gamePath} does not exist yet` : run ? 'Game running — click for options. In the game: F9 sends the moment to the studio, F5 restarts.' : `Play ${p.name} in its own window (edits apply live)`;
+    this.playBtn.title = !p ? '' : !p.hasGame ? `${p.gamePath} does not exist yet` : run ? 'Game running — click for options. In the game: F8 tunes, F9 sends the moment to the studio, F5 restarts.' : `Play ${p.name} in its own window (edits apply live)`;
     mount(this.playBtn, icon(run ? 'dot' : 'play'), h('span', null, run ? 'Running' : 'Play'));
   }
 
@@ -285,13 +287,7 @@ class App {
     ], { align: 'right' });
   }
 
-  onMoment(m) {
-    const p = this.projects.find((x) => x.id === m.projectId);
-    openRequestDialog(this, {
-      scope: m.projectId, dialogTitle: `Talk about this moment${p ? ` in ${p.name}` : ''}`, kind: 'gameplay',
-      attachments: [m.dataUrl], context: { state: m.state, console: m.console },
-    });
-  }
+  onMoment(m) { openMoment(this, m); } // studio/ui/js/link.js
 
   onGameConsole(c) {
     if (c.level !== 'error' || this.gameErrorsShown.has(c.projectId)) return;

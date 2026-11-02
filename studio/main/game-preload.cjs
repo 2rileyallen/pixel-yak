@@ -1,6 +1,7 @@
 // studio/main/game-preload.cjs — loaded into game windows the studio opens. Gives the game's
 // art registry (core/art/registry.js) a way to hear "the user saved new pixel edits" so
-// sprites update live without restarting the game. Nothing else is exposed to game code.
+// sprites update live without restarting the game, and engine/link (F8 tuning) a way to keep
+// a choice. Nothing else is exposed to game code.
 // The callback gets { assets: [ids] } (only those assets changed) or { assets: null } (re-read all).
 const { contextBridge, ipcRenderer } = require('electron');
 
@@ -15,4 +16,6 @@ ipcRenderer.on('art-edits', (e, info) => {
 contextBridge.exposeInMainWorld('studioLink', {
   inStudio: true,
   onArtEdits: (cb) => { if (typeof cb === 'function') listeners.push(cb); },
+  // F8 Keep: the studio writes games/<id>/tuning/<slug>.json + a lesson (studio/main/ipc-link.mjs)
+  keep: (choice) => ipcRenderer.invoke('link:keep', choice),
 });

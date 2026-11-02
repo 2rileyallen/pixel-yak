@@ -1,0 +1,5 @@
+/* studio/ui/css/link.css — engine/link in the studio (studio/ui/js/link.js).
+   An F9 moment's save-state (<R-id>-save.json) is listed with a request's attachments so it moves
+   and is deleted with the request; it's for the AI to load, not a picture, so the inbox's image
+   strip leaves it out. */
+.attachments img[alt$=".json"] { display: none; }

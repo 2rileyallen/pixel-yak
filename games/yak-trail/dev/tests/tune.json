@@ -1,0 +1,19 @@
+{
+  "page": "games/yak-trail/game/index.html?scene=play&at=120&tune=1",
+  "w": 960,
+  "h": 540,
+  "note": "F8 knobs (docs/contracts/TUNING.md): with ?tune=1 the game offers Trot speed, Hop height and Trail music; a faster trot is felt at once, F8 opens the panel over the running game.",
+  "steps": [
+    { "waitFor": "window.__yak && window.__yak.scene() === 'play' && window.__yak.run().tick > 5", "ms": 8000, "label": "the climb is running" },
+    { "expect": "window.__yakLink.tune.list().map((k) => k.name + '=' + k.value)", "equals": ["Trot speed=1.6", "Hop height=40", "Trail music=A · folk band"], "label": "the knobs start at the code's values" },
+    { "js": "window.__yakLink.tune.set('Trot speed', 2.4)" },
+    { "down": "ArrowRight" },
+    { "waitFor": "window.__yak.run().vx > 2.3", "ms": 3000, "label": "the faster trot takes effect live" },
+    { "up": "ArrowRight" },
+    { "key": "F8" },
+    { "wait": 400 },
+    { "shot": "01-panel.png" },
+    { "key": "F8" },
+    { "js": "window.__yakLink.tune.set('Trot speed', 1.6); true" }
+  ]
+}

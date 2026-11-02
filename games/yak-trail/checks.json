@@ -1,0 +1,32 @@
+{
+  "format": "pixel-yak-checks@1",
+  "note": "Which checks guard which part of Yak Trail (docs/contracts/CHECKS.md). Commands run from the Pixel Yak folder. A changed file takes the checks of the FIRST area pattern it matches, so specific patterns go first. node cli/yak.mjs test yak-trail runs the checks for what changed; --full runs the full set (the pre-push hook does too).",
+  "checks": {
+    "unit": { "run": "node --test \"games/yak-trail/dev/**/*.test.mjs\"", "note": "the rules, the F8 tune, F9 saves and the sound as tests (dev/*.test.mjs)" },
+    "studio": { "yak": "check", "note": "structure, every art id renders at its declared size, every song and effect renders, the linter" },
+    "boot": { "captures": ["boot"], "note": "the game boots and draws (dev/tests/boot.json)" },
+    "moment": { "captures": ["moment"], "note": "an F9 save-state boots into its climb (dev/tests/moment.json)" },
+    "captures": { "captures": "*", "note": "every capture test in dev/tests/" }
+  },
+  "areas": {
+    "game/sprites.js": ["unit", "studio", "boot"],
+    "game/art/**": ["studio", "boot"],
+    "game/sound.js": ["unit", "studio"],
+    "game/sound/**": ["studio"],
+    "design/instruments.js": ["unit", "studio"],
+    "assets.js": ["studio", "boot"],
+    "design/**/*.js": ["studio", "boot"],
+    "design/**": [],
+    "game/**": ["unit", "boot"],
+    "dev/fixtures/**": ["moment"],
+    "dev/tests/**": ["captures"],
+    "dev/**": ["unit"],
+    "game.json": ["unit", "studio", "boot"],
+    "clips/**": [],
+    "requests/**": [],
+    "**/*.md": []
+  },
+  "quick": ["unit"],
+  "full": ["unit", "studio", "captures"],
+  "perf": []
+}

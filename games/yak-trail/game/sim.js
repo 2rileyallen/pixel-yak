@@ -4,13 +4,14 @@
 // run.events ('hop', 'land', 'munch', 'checkpoint', 'fall', 'summit') for effects and sound.
 import { GAP } from './level.js';
 
-// Feel. Speeds in pixels per tick. A studio tuning panel can change these live (TUNE is shared).
+// Feel. Speeds in pixels per tick. step() takes a tune object (default TUNE), so the game can hand
+// it the F8 knobs' values (main.js game.tune()) while the sim stays pure.
 export const TUNE = {
   trot: 1.6,      // top speed on the ground
   accel: 0.14,    // how fast it gets there
   brake: 0.22,    // how fast it stops when you let go
   air: 0.08,      // steering in the air
-  hop: 4.6,       // take-off speed (≈ 42 px high)
+  hop: 4.6,       // take-off speed (a held hop rises HOP_PX)
   cut: 1.6,       // letting go of hop early caps the rise at this speed (short hops)
   gravity: 0.25,
   fall: 6,        // fastest fall
@@ -18,6 +19,12 @@ export const TUNE = {
   buffer: 6,      // ticks a hop pressed just before landing is remembered
   munch: 24,      // ticks a munch takes (hop to cancel it)
 };
+
+// How high a held hop rises at TUNE.hop, in pixels (measured: dev/sim.test.mjs checks it).
+export const HOP_PX = 40;
+// The take-off speed for a held hop about `px` high (the F8 "Hop height" knob). Height grows with
+// the square of the speed; at HOP_PX it is exactly TUNE.hop, so the default feel never drifts.
+export const hopFor = (px, T = TUNE) => T.hop * Math.sqrt(Math.max(1, px) / HOP_PX);
 
 const HALF = 9;   // half the yak's width, for walls
 const FOOT = 6;   // half its footprint, for standing
@@ -31,6 +38,25 @@ export function newRun(level) {
     coyote: 0, buffer: 0, munch: 0, eaten: new Uint8Array(level.tufts.length), tufts: 0,
     check: -1, falls: 0, tick: 0, done: false, doneTick: 0, events: [],
   };
+}
+
+// A run as plain JSON (an F9 moment's save) and back. loadRun() puts a saved climb into a fresh run;
+// the same inputs then play on exactly as they would have (dev/sim.test.mjs).
+const SAVED = ['x', 'y', 'vx', 'vy', 'face', 'coyote', 'buffer', 'munch', 'tufts', 'check', 'falls', 'tick', 'doneTick'];
+export function saveRun(run) {
+  const s = { ground: run.ground, done: run.done, eaten: [] };
+  for (const k of SAVED) s[k] = run[k];
+  run.eaten.forEach((e, i) => { if (e) s.eaten.push(i); });
+  return s;
+}
+export function loadRun(run, s) {
+  if (!s || typeof s !== 'object') return run;
+  for (const k of SAVED) if (Number.isFinite(s[k])) run[k] = s[k];
+  run.ground = !!s.ground; run.done = !!s.done;
+  run.eaten.fill(0);
+  for (const i of Array.isArray(s.eaten) ? s.eaten : []) if (i >= 0 && i < run.eaten.length) run.eaten[i] = 1;
+  run.events.length = 0;
+  return run;
 }
 
 const colTop = (level, x) => (x < 0 || x >= level.width ? GAP : level.top[x | 0]);

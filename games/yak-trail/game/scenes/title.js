@@ -16,6 +16,7 @@ export function titleScene(game) {
     name: 'title',
     update() {
       t++;
+      game.trailMusic(); // starts with the first key press (browsers' rule), then plays on into the climb
       if (game.ok() || game.input.padPressed(9)) game.play();
     },
     draw(g) {

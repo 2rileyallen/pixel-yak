@@ -114,7 +114,7 @@ function copyDir(from, to) {
 
 // The clean copy: the harness parts a game and the CLI need, then the game itself at REF.
 function makeCopy() {
-  const harness = ['engine', 'cli', 'studio/data', 'package.json'];
+  const harness = ['engine', 'cli', 'studio/data', 'tools/checks.mjs', 'package.json']; // tools/checks.mjs: the CLI's checks command imports it
   const harnessCommit = git(ROOT, ['rev-parse', '--short', 'HEAD']);
   if (harnessCommit) archive(ROOT, 'HEAD', harness, SRC);
   else {

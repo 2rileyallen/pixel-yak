@@ -1,0 +1,14 @@
+{
+  "page": "games/yak-trail/game/index.html?moment=../dev/fixtures/moment-rocks.json",
+  "w": 960,
+  "h": 540,
+  "note": "An F9 save-state boots straight into that climb (docs/contracts/MOMENTS.md): the sample save puts the yak in the rocks with 10 tufts munched, cairn 2 passed and the clock at 0:33.5.",
+  "steps": [
+    { "waitFor": "window.__yak && window.__yak.scene() === 'play' && window.__yak.run().tick > 2025", "ms": 8000, "label": "the moment loads into the climb and plays on" },
+    { "expect": "window.__yak.run().tufts", "equals": 10, "label": "the tufts munched come back" },
+    { "expect": "window.__yak.run().check", "equals": 1, "label": "and the cairn passed" },
+    { "expect": "Math.abs(window.__yak.run().x - 2563) < 30", "label": "the yak stands where it was (it does not move without a key)" },
+    { "expect": "window.__studioMoment().scene", "equals": "play", "label": "the state F9 reads says so" },
+    { "shot": "01-restored.png" }
+  ]
+}

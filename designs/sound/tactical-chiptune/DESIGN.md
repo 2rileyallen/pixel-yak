@@ -1,8 +1,7 @@
 # Tactical Chiptune
 
-Handheld-console battle music: a wide, detuned square-wave lead, a slapping filtered bass in
-sixteenths and crisp 8-bit drums, fast and in a minor key — built for grid fights that loop for
-minutes. A low-health mode plays the same notes with a brighter lead, open hats and a heartbeat.
+Handheld-console battle music: a wide detuned square lead, a slapping filtered bass in sixteenths and crisp 8-bit drums, fast and minor, built for grid fights that loop for minutes. A low-health twin brightens the lead and adds a heartbeat.
+
 Its code twin is `instruments.js`; `example-song.js` holds a battle loop and its low-health twin.
 
 ## The mood in a paragraph

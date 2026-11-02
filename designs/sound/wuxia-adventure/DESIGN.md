@@ -1,9 +1,8 @@
 # Wuxia Adventure
 
-Plucked zither strings, a breathy bamboo flute and a bowed two-string fiddle over slow pentatonic
-harmony, all in a long, misty hall — music for wandering mountains, old ruins and sudden duels.
-Calm pieces are sparse and slow; battles lean on big hand drums, a tight pluck pattern and the
-fiddle singing on top. Its code twin is `instruments.js`; `example-song.js` shows it in use.
+Plucked zither, a breathy bamboo flute and a bowed two-string fiddle over slow pentatonic harmony in a long, misty hall. Calm pieces are sparse and slow; battles lean on big hand drums, a tight pluck pattern and the fiddle on top.
+
+Its code twin is `instruments.js`; `example-song.js` shows it in use.
 
 ## The mood in a paragraph
 Wistful and wide. A lot of air between the notes: a single flute line over a rolling pluck

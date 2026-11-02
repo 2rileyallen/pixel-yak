@@ -1,8 +1,7 @@
 # Synthwave Night
 
-A rainy city after dark: a pumping saw bass with a filter pluck, a square arpeggio running in
-sixteenths, wide detuned-saw minor chords and a gated snare in a big room — with rain and the hum
-of neon signs underneath. Steady, cool and a little lonely, at a walking-to-driving tempo.
+A rainy city after dark: a pumping saw bass with a filter pluck, a square arpeggio in sixteenths, wide detuned-saw minor chords and a gated snare — with rain and neon hum underneath. Steady, cool, a little lonely.
+
 Its code twin is `instruments.js`; `example-song.js` holds a night-drive loop.
 
 ## The mood in a paragraph

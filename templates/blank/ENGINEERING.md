@@ -12,7 +12,8 @@ A big game reads skill optimize before it grows (`docs/LESSONS.md` → building 
 | Capture tests | `node tools/run-captures.mjs {{ID}}` (`dev/tests/*.json`; screenshots in `dev/out/`) |
 | Reproduce an F9 moment | a capture test whose page is `games/{{ID}}/game/index.html?moment=../requests/<R-id>-save.json` |
 | Tune outside the studio | open the game with `?tune=1` (F8 works; Keep copies the choice instead of saving it) |
-| Structure + art | `node cli/yak.mjs check {{ID}}` |
+| Structure + art + sound | `node cli/yak.mjs check {{ID}}` |
+| Hear a song without listening | `node cli/yak.mjs render-song {{ID}} theme --out scratch/theme.wav` (prints length, peak, loudness) |
 
 ## Where the code lives
 | File | Owns |
@@ -22,6 +23,8 @@ A big game reads skill optimize before it grows (`docs/LESSONS.md` → building 
 | `game/art/` | art generators (deterministic: no `Math.random`) |
 | `design/palette.js` | the palette |
 | `engine/link/studio.js` (imported in `main.js`) | F8 knobs and variants, F9 moments: `studio.onMoment` says what a moment holds, `?moment=<file>` boots into one (docs/contracts/TUNING.md, MOMENTS.md) |
+| `game/sound.js` | songs + sound effects (data the engine plays; docs/contracts/SOUND.md) |
+| `design/instruments.js` | the instruments the songs name |
 
 ## Saves
 (the save format and its version, once the game saves)

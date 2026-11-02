@@ -154,7 +154,7 @@ export class InboxView {
           r.notes.length ? h('span', { title: `${r.notes.length} note${r.notes.length === 1 ? '' : 's'} from you` }, icon('pencil'), String(r.notes.length)) : null,
           h('span', null, `· ${timeAgo(r.updatedAt)}`),
           r.createdBy === 'ai' ? h('span', { title: 'Created by the AI' }, icon('bot')) : null)),
-      r.attachments.length ? h('div.thumb-s', null, h('img', { src: this.attUrl(r, r.attachments[0]), alt: '', style: { maxWidth: '100%', maxHeight: '100%', imageRendering: 'pixelated' } })) : null);
+      r.attachments.length ? h('div.thumb-s', null, /\.png$/.test(r.attachments[0]) ? h('img', { src: this.attUrl(r, r.attachments[0]), alt: '', style: { maxWidth: '100%', maxHeight: '100%', imageRendering: 'pixelated' } }) : icon('sound')) : null);
   }
 
   attUrl(r, name) {
@@ -321,7 +321,9 @@ export class InboxView {
       field(r.createdBy === 'web' ? 'What the player wrote' : r.createdBy === 'ai' ? (r.assignee === 'user' ? 'What the AI asks' : 'Details (filed by the AI)') : 'What you asked', body),
       h('div.form-grid', { style: { gridTemplateColumns: 'repeat(3, 1fr)' } }, field('Kind', kind), field('Model', tier), field('Who does it', who)),
       h('div.row', null, saveEdits),
-      r.attachments.length ? field('Attachments', h('div.attachments', null, r.attachments.map((a) => h('img', { src: this.attUrl(r, a), alt: a, title: 'Click to enlarge', onclick: (e) => lightbox(e.target.src) })))) : null,
+      r.attachments.length ? field('Attachments', h('div.attachments', null, r.attachments.map((a) => (/\.png$/.test(a)
+        ? h('img', { src: this.attUrl(r, a), alt: a, title: 'Click to enlarge', onclick: (e) => lightbox(e.target.src) })
+        : h('div.col', null, h('span.dim', null, a), /\.mid$/.test(a) ? null : h('audio', { src: this.attUrl(r, a), controls: true, preload: 'none' })))))) : null,
       r.history.length ? field('History', h('div.history', null, r.history.slice().reverse().map((x) => h(`div.hi${x.by === 'ai' ? '.ai' : ''}`, null,
         h('b', null, x.by === 'ai' ? (x.who && x.who !== 'ai' ? `AI (${x.who})` : 'AI') : x.by === 'web' ? 'Player' : 'You'), x.status ? ` → ${HIST[x.status] || x.status}` : '',
         x.note && !(x.status && (x.note.toLowerCase() === HIST[x.status] || /^claimed by /.test(x.note))) ? h('span', null, ` — ${x.note}`) : null, h('span.when', null, timeAgo(x.ts)))))) : null,

@@ -58,6 +58,14 @@ contextBridge.exposeInMainWorld('studio', {
     running: () => call('game:running'),
     console: (pid) => call('game:console', pid),
   },
+  sound: {
+    info: (pid) => call('sound:info', pid),
+    edits: (pid) => call('sound:edits', pid),
+    save: (pid, payload) => call('sound:save', pid, payload),
+    revert: (pid, kind, id) => call('sound:revert', pid, kind, id || null),
+    lessons: (pid, opts) => call('sound:lessons', pid, opts || {}),
+    summary: (pid) => call('sound:summary', pid),
+  },
   shell: { open: (rel, reveal) => call('shell:open', rel, !!reveal) },
   // engine/link: an F9 moment's save-state goes next to the request it opened (studio/main/ipc-link.mjs)
   link: { attachMoment: (momentId, scope, requestId) => call('link:attach-moment', momentId, scope, requestId) },

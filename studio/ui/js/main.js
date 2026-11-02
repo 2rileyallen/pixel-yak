@@ -1,9 +1,10 @@
 // studio/ui/js/main.js — Pixel Yak's shell: top bar (project switcher, live indicator, play),
-// left rail (Art · Inbox · Lessons · Projects · Ideas), live file-change dispatch, game moments.
+// left rail (Art · Sound · Inbox · Lessons · Projects · Ideas), live file-change dispatch, game moments.
 import { h, mount, btn, iconBtn, toast, popMenu, copyText, timeAgo, modal } from './ui.js';
 import { icon } from './icons.js';
 import { ProjectHost } from './host.js';
 import { ArtView } from './views/art.js';
+import { SoundView } from './views/sound.js';
 import { InboxView } from './views/inbox.js';
 import { LessonsView } from './views/lessons.js';
 import { ProjectsView } from './views/projects.js';
@@ -23,12 +24,13 @@ const ls = {
 };
 const NAV = [
   ['art', 'Art', 'art', 'Paint any asset of this game (1)'],
-  ['inbox', 'Inbox', 'inbox', 'Requests between you and the AI (2)'],
-  ['lessons', 'Lessons', 'lessons', 'What the AI is learning from your edits (3)'],
-  ['projects', 'Games', 'projects', 'All games, their stage, new game (4)'],
-  ['ideas', 'Ideas', 'ideas', 'Game ideas backlog (5)'],
-  ['clips', 'Clips', 'film', 'Promo videos of this game: watch, change the words, re-render'],
+  ['sound', 'Sound', 'sound', 'See, play and change the songs and sound effects of this game (2)'],
+  ['inbox', 'Inbox', 'inbox', 'Requests between you and the AI (3)'],
+  ['lessons', 'Lessons', 'lessons', 'What the AI is learning from your edits (4)'],
+  ['clips', 'Clips', 'film', 'Promo videos of this game: watch, change the words, re-render (5)'],
   ['designs', 'Designs', 'designs', 'The design library: art, sound and game design files (6)'],
+  ['projects', 'Games', 'projects', 'All games, their stage, new game (7)'],
+  ['ideas', 'Ideas', 'ideas', 'Game ideas backlog (8)'],
 ];
 
 class App {
@@ -85,7 +87,7 @@ class App {
     this.sizes = this.info.sizes;
     this.buildShell();
     await Promise.all([this.reloadProjects(), this.reloadStyles(), this.reloadDesigns()]);
-    this.views = { art: new ArtView(this), inbox: new InboxView(this), lessons: new LessonsView(this), projects: new ProjectsView(this), ideas: new IdeasView(this), clips: new ClipsView(this), designs: new DesignsView(this) };
+    this.views = { art: new ArtView(this), sound: new SoundView(this), inbox: new InboxView(this), lessons: new LessonsView(this), clips: new ClipsView(this), designs: new DesignsView(this), projects: new ProjectsView(this), ideas: new IdeasView(this) };
     mount(this.content, Object.values(this.views).map((v) => v.el));
     await this.reloadRequests();
     for (const id of await api.game.running().catch(() => [])) this.running.add(id);
@@ -102,7 +104,7 @@ class App {
     initLink(this); // F8 Keep toasts (studio/ui/js/link.js)
     setInterval(() => this.renderLive(), 20000);
     window.addEventListener('keydown', (e) => this.onKey(e));
-    window.addEventListener('beforeunload', (e) => { if (this.views.art.dirtySessions().length) { e.preventDefault(); e.returnValue = ''; } });
+    window.addEventListener('beforeunload', (e) => { if (this.views.art.dirtySessions().length || this.views.sound.dirty()) { e.preventDefault(); e.returnValue = ''; } });
     document.querySelector('.boot')?.classList.add('out');
     window.__studioReady = true;
   }
@@ -178,6 +180,10 @@ class App {
       const ok = await confirmDialog('Leave unsaved edits?', `${dirty.map((s) => s.asset.name).join(', ')} in ${this.project.name} have unsaved changes. Switching games discards them.`, { okLabel: 'Discard & switch', danger: true });
       if (!ok) return;
     }
+    if (this.project && this.views.sound.dirty()) {
+      const { confirmDialog } = await import('./ui.js');
+      if (!(await confirmDialog('Leave unsaved sound edits?', `${this.project.name} has unsaved changes in the Sound view. Switching games discards them.`, { okLabel: 'Discard & switch', danger: true }))) return;
+    }
     if (this.host) this.host.destroyFrame();
     this.project = p;
     ls.set('ps.project', id);
@@ -188,6 +194,7 @@ class App {
     this.updateCounts();
     await Promise.all([
       this.views.art.setProject(p, this.host),
+      this.views.sound.setProject(p),
       this.views.inbox.setProject(p),
       this.views.lessons.setProject(p),
       this.views.clips.setProject(p),
@@ -334,6 +341,7 @@ class App {
     if (kinds.has('designs')) await this.reloadDesigns();
     if (kinds.has('designs') || kinds.has('projects')) this.views.designs.refresh();
     await this.views.art.onFsChange(changes);
+    await this.views.sound.onFsChange(changes);
     if (kinds.has('code') || kinds.has('edits')) this.views.projects.render();
   }
 
@@ -350,8 +358,8 @@ class App {
     if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
     if (e.ctrlKey || e.altKey || e.metaKey) return;
     if (this.view !== 'art' || !this.views.art.session) {
-      const idx = ['1', '2', '3', '4', '5', '6'].indexOf(e.key);
-      if (idx >= 0) this.go(NAV[idx][0]);
+      const idx = /^[1-9]$/.test(e.key) ? Number(e.key) - 1 : -1;
+      if (idx >= 0 && idx < NAV.length) this.go(NAV[idx][0]);
     }
   }
 

@@ -1,10 +1,12 @@
 // game/main.js — {{NAME}}'s entry point. A placeholder until the first playable: it boots the
-// engine's shell (screen, fixed-step loop, keyboard + pad + mouse) and shows every registered
-// sprite, so the art pipeline (generator → Pixel Yak edits → game) works from day one.
+// engine's shell (screen, fixed-step loop, keyboard + pad + mouse), shows every registered
+// sprite and plays the theme, so the art and sound pipelines (generator → Pixel Yak edits →
+// game) work from day one.
 import { createScreen, createInput, runLoop } from '../../../engine/shell/runtime.js';
 import { text } from '../../../engine/shell/font.js';
 import { studio } from '../../../engine/link/studio.js';
 import { ART, sprite } from './sprites.js';
+import { SOUND } from './sound.js';
 
 const W = {{W}}, H = {{H}};
 const screen = studio.attach(createScreen(document.getElementById('game'), { w: W, h: H, background: '#0c1024' }));
@@ -16,6 +18,16 @@ const g = screen.g;
 const frameTicks = studio.knob('Animation frame ticks', 10, { min: 2, max: 30, step: 1 });
 
 const state = { scene: 'placeholder', tick: 0 };
+
+// Browsers start audio only after a click or key press: the first one starts the music.
+function startAudio() {
+  SOUND.unlock();
+  SOUND.music('theme');
+  removeEventListener('keydown', startAudio);
+  removeEventListener('pointerdown', startAudio);
+}
+addEventListener('keydown', startAudio);
+addEventListener('pointerdown', startAudio);
 
 function step() {
   input.update();
@@ -39,9 +51,12 @@ function draw() {
 
 // F9 in Pixel Yak attaches this: a small state to read, and a save an AI can load to reproduce the
 // moment (docs/contracts/MOMENTS.md). Capture tests read the state as window.__studioMoment().
-studio.onMoment(() => ({ state: { scene: state.scene, tick: state.tick }, save: { tick: state.tick } }));
+studio.onMoment(() => ({ state: { scene: state.scene, tick: state.tick, music: SOUND.current() }, save: { tick: state.tick } }));
 
 // ?moment=../requests/<R-id>-save.json boots straight into a saved moment.
 studio.loadMoment().then((save) => { if (save && Number.isFinite(save.tick)) state.tick = save.tick; });
+
+// Pixel Yak's checks read the songs as the game plays them (the AI's, with the user's edits on top).
+window.__studioSound = SOUND;
 
 runLoop(step, draw);

@@ -87,6 +87,9 @@ export const commands = {
       out(`lint: ${lint.files} game files · ${plural(lint.errors, 'error')} · ${plural(lint.warnings, 'warning')}${lint.findings.length ? ' (fix hints: node tools/check-pixel-guardrails.cjs ' + pid + ')' : ''}`);
       for (const f of lint.findings.slice(0, 40)) out(`  ${f.severity.padEnd(5)} ${f.rule} ${f.file}${f.line ? ':' + f.line : ''}  ${f.code}`);
       const lintMs = Date.now() - tl;
+      const snd = await (await import('./sound.mjs')).checkSound(pid); // songs + sound effects compile and render (docs/contracts/SOUND.md)
+      errors += snd.errors;
+      for (const l of snd.lines) out(l.startsWith('sound:') ? l : `  ${l}`);
       out(`\n${errors ? plural(errors, 'error') : 'all checks pass'} · took ${((Date.now() - t0) / 1000).toFixed(1)} s (art ${(artMs / 1000).toFixed(1)} s incl. the headless browser, lint ${lintMs} ms)`);
       const tests = fs.existsSync(path.join(D.ROOT, 'games', pid, 'dev', 'tests'));
       out(`also: ${tests ? `node tools/run-captures.mjs ${pid} (its capture tests) · ` : ''}look at it: node cli/yak.mjs sheet ${pid}`);

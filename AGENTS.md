@@ -34,13 +34,21 @@ Everything else in this repo is one of two things:
 ## Starting a session
 1. This page.
 2. `node cli/yak.mjs inbox` and `node cli/yak.mjs games`: open requests and the games, one line each.
-3. Working on a game: `games/<id>/AGENTS.md`, its one page.
+3. **The person names a game** (or a request is about one): read `games/<id>/AGENTS.md`, its one
+   page. Its **Now** line says where that game stands.
 4. Then only what the task needs. The table below tells you which skill to use.
+
+**Each game keeps its own knowledge.** Its state, decisions, accounts, online site and anything else
+particular to it live in its own folder: `AGENTS.md`, `DECISIONS.md`, `design/`, `skills/`.
+- **A game's own skills win.** If `games/<id>/skills/` has one for the task (e.g. how that game goes
+  online), follow it over the general skill below.
+- **Nothing about one game goes into the harness** (this page, `docs/`, `.agents/skills/`) or into
+  your memory of this folder. Working on many games here must never blur them together.
 
 ## Where things are
 | Folder | What |
 |---|---|
-| `games/<id>/` | One game each, often its own git repo: `game.json`, `AGENTS.md`, `design/` (its own art, sound and game design files + what it learned), `DECISIONS.md`, `CHANGELOG.md`, `ENGINEERING.md`, `checks.json`, `game/`, `requests/`, `dev/` |
+| `games/<id>/` | One game each, often its own git repo: `game.json`, `AGENTS.md`, `design/` (its own art, sound and game design files + what it learned), `DECISIONS.md`, `CHANGELOG.md`, `ENGINEERING.md`, `checks.json`, `skills/` (its own, e.g. its online site), `game/`, `requests/`, `dev/` |
 | `engine/` | What games import: `art/` (painter, art contract, edits), `shell/` (screen, loop, input, font, saves), `sound/`, `link/` (F8 tuning, F9 moments) |
 | `designs/` | The design library: `art/`, `sound/`, `game/` design files a new game starts from |
 | `studio/` | The desktop app: `main/` (Electron), `data/` (the file layer), `ui/` (the views) |

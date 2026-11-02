@@ -5,6 +5,12 @@ description: Put a Pixel Yak game in front of players — on the web (e.g. Cloud
 
 # Publish
 
+**First, the game's own notes.** A game that is already online usually has its own skill (e.g.
+`games/<id>/skills/<id>-web/SKILL.md`) plus `web/LIVE.json` and its build script. Follow those: the
+address, account and build steps belong to that game and are written there. This skill is the
+general method, for a game going online for the first time or with no notes of its own. When you set
+a game up online, write its own skill, so the next "update <game> online" just works.
+
 **Hard line: nothing goes online and nothing costs money without the person's word in chat.** "Push
 the game" allows a push. "Pull feedback" allows a pull. Nothing else on their accounts: no new
 domains, no paid resources, no settings changes they didn't ask for. Their account names live in

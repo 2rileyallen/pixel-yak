@@ -23,6 +23,10 @@ instead of repeating them. Update **Now** whenever the focus changes.
 | `requests/` | This game's tickets with the user | skill requests |
 | `tuning/` | F8 choices the user kept while playing, waiting to be built in (`node cli/yak.mjs tuning {{ID}}`) | after the user tunes (skill explore) |
 | `dev/` | Tests: `*.test.mjs` (node:test) and `tests/*.json` (capture tests) | checking your work |
+| `skills/` | This game's own skills (e.g. how it goes online), added when it needs them; they win over the general ones | that task |
+
+Everything particular to this game lives in this folder: its state (**Now** above), decisions,
+accounts and online setup. None of it goes into Pixel Yak's own files.
 
 ## Check your work
 - `node --test "games/{{ID}}/dev/**/*.test.mjs"` — the rules as tests.

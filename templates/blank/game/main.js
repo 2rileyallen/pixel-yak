@@ -3,7 +3,7 @@
 // sprite and plays the theme, so the art and sound pipelines (generator → Pixel Yak edits →
 // game) work from day one.
 import { createScreen, createInput, runLoop } from '../../../engine/shell/runtime.js';
-import { text } from '../../../engine/shell/font.js';
+import { text, useFontArt } from '../../../engine/shell/font.js';
 import { studio } from '../../../engine/link/studio.js';
 import { ART, sprite } from './sprites.js';
 import { SOUND } from './sound.js';
@@ -12,6 +12,7 @@ const W = {{W}}, H = {{H}};
 const screen = studio.attach(createScreen(document.getElementById('game'), { w: W, h: H, background: '#0c1024' }));
 const input = createInput().attach(screen);
 const g = screen.g;
+useFontArt(sprite); // text draws from the `font` art entry, so the user can repaint the letters
 
 // F8 in a game launched from Pixel Yak: the user slides this live and keeps the value they like
 // (docs/contracts/TUNING.md). Anywhere else it's simply 10.
@@ -39,6 +40,7 @@ function draw() {
   g.fillRect(0, 0, W, H);
   let x = 8, y = 20, rowH = 0;
   for (const [id, e] of Object.entries(ART)) {
+    if (id === 'font' || id.startsWith('ui_')) continue; // the font and widgets show as text and boxes, not in this gallery
     const frames = (e.anims && e.anims[e.defaultAnim]) || e.poses;
     const c = sprite(id, frames[Math.floor(state.tick / frameTicks()) % frames.length] || frames[0]);
     if (x + c.width > W - 8) { x = 8; y += rowH + 8; rowH = 0; }

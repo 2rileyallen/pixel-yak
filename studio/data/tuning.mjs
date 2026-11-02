@@ -9,7 +9,7 @@ import { projectDir } from './games.mjs';
 
 export const TUNING_FORMAT = 'pixel-yak-tuning@1';
 
-// "Kobold walk speed" -> "kobold-walk-speed" (the same rule as engine/link/studio.js slugOf)
+// "Hero walk speed" -> "hero-walk-speed" (the same rule as engine/link/studio.js slugOf)
 export function tuningSlug(name) {
   return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'knob';
 }

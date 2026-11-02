@@ -13,7 +13,7 @@ the one they choose. The contract is `docs/contracts/TUNING.md`.
 1. **Name the axis.** Say in one line what you think "off" might be (speed? weight? colour? the music's
    mood?). If you see two different axes, offer both — one knob or variant each.
 2. **Build 2–4 alternatives** in the game's code:
-   - a number → `studio.knob('Kobold walk speed', 1.0, { min: 0.5, max: 2, step: 0.1 })`
+   - a number → `studio.knob('Hero walk speed', 1.0, { min: 0.5, max: 2, step: 0.1 })`
    - a different thing → `studio.variant('Title music', ['A · calm harp', 'B · war drums', 'C · music box'])`
    Each option is real and finished enough to judge — a variant you'd be glad to ship, not a sketch.
    The code's default stays what the game had, so nothing changes until the user picks.

@@ -34,7 +34,7 @@ the moment goes without it and says why.
 ```json
 { "format": "pixel-yak-moment@1", "game": "<id>", "request": "R-261102-081505-tkv",
   "at": "2026-11-02T15:15:05.242Z", "state": { "scene": "placeholder", "tick": 583 },
-  "save": { "tick": 583 }, "tuning": [{ "name": "Kobold walk speed", "value": 1.4, "default": 1 }],
+  "save": { "tick": 583 }, "tuning": [{ "name": "Hero walk speed", "value": 1.4, "default": 1 }],
   "console": [] }
 ```
 

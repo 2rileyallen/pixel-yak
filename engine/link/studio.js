@@ -3,7 +3,7 @@
 //
 //   import { studio } from '../../../engine/link/studio.js';
 //   studio.attach(screen);                                   // optional: the panel uses the game's pixels
-//   const speed = studio.knob('Kobold walk speed', 1.0, { min: 0.5, max: 2, step: 0.1 });
+//   const speed = studio.knob('Hero walk speed', 1.0, { min: 0.5, max: 2, step: 0.1 });
 //   const title = studio.variant('Title music', ['A · calm harp', 'B · war drums']);
 //   x += speed() * dt;  playSong(SONGS[title()]);            // read them every frame: a plain call
 //   studio.onMoment(() => ({ state: { scene, hp }, save: saveGame() }));
@@ -24,7 +24,7 @@ const bySlug = new Map();  // slug -> item
 let screenRef = null;      // from attach(screen)
 let momentFn = null;       // from onMoment(fn)
 
-// "Kobold walk speed" -> "kobold-walk-speed" (the file name in games/<id>/tuning/)
+// "Hero walk speed" -> "hero-walk-speed" (the file name in games/<id>/tuning/)
 export function slugOf(name) {
   return String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'knob';
 }
@@ -207,7 +207,7 @@ if (ON) {
     e.preventDefault(); e.stopImmediatePropagation();
     if (!e.repeat) togglePanel();
   }, true);
-  // for tools and headless tests: window.__yakLink.tune.set('Kobold walk speed', 1.4)
+  // for tools and headless tests: window.__yakLink.tune.set('Hero walk speed', 1.4)
   window.__yakLink = {
     version: 1,
     tune: {
@@ -249,6 +249,6 @@ export const studio = {
   attach(screen) { screenRef = screen || null; return screen; },
   // every knob and variant (for tools and tests): [{ name, slug, kind, value, default, kept }]
   list,
-  // set one by name from a test or the console: studio.set('Kobold walk speed', 1.4)
+  // set one by name from a test or the console: studio.set('Hero walk speed', 1.4)
   set: setByName,
 };

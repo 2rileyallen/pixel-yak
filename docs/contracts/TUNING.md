@@ -8,7 +8,7 @@ Game code declares them with `engine/link/studio.js`; F8 opens a pixel-art panel
 ```js
 import { studio } from '../../../engine/link/studio.js';
 studio.attach(screen); // optional (createScreen's screen): the panel uses the game's own pixel size
-const speed = studio.knob('Kobold walk speed', 1.0, { min: 0.5, max: 2, step: 0.1 });
+const speed = studio.knob('Hero walk speed', 1.0, { min: 0.5, max: 2, step: 0.1 });
 const title = studio.variant('Title music', ['A · calm harp', 'B · war drums', 'C · music box']);
 const roof  = studio.variant('Warren roof art', ['warren_roof_a', 'warren_roof_b']);
 
@@ -18,7 +18,7 @@ sprite(roof(), 'idle');         // … so options can be keys, asset ids, colour
 title.index();                  // … or its position (0, 1, 2)
 ```
 - Make each knob **once, at load** (module top level); read the getter wherever it's needed.
-- The **name is the identity**: its slug (`kobold-walk-speed`) names the files. Renaming makes a new knob.
+- The **name is the identity**: its slug (`hero-walk-speed`) names the files. Renaming makes a new knob.
 - Knob options: `min`, `max`, `step` (sensible defaults from the value). Variant option: `{ default: i }`.
 - Variant letters: a label starting `A ·`, `B ·` … shows that letter; otherwise A, B, C by position.
 
@@ -48,7 +48,7 @@ A stored value only applies while the code's default is still `d`, so a default 
 { "format": "pixel-yak-tuning@1", "name": "Title music", "slug": "title-music", "kind": "variant",
   "chosen": "B · war drums", "label": "B · war drums", "default": "A · calm harp",
   "options": ["A · calm harp", "B · war drums", "C · music box"],
-  "note": "drums fit a dragon", "at": "2026-11-02T15:14:58.643Z", "by": "user" }
+  "note": "drums fit the boss", "at": "2026-11-02T15:14:58.643Z", "by": "user" }
 ```
 A knob has `"kind": "knob"`, numbers for `chosen` / `default`, and `"range": { "min", "max", "step" }`
 instead of `options`.
@@ -57,7 +57,7 @@ instead of `options`.
 
 `games/<id>/design/lessons/tuning.jsonl` — one line per Keep (never rewritten):
 ```json
-{"id":"L-tune-261102151458-fdc","ts":"…","kind":"tuning","game":"<id>","name":"Title music","slug":"title-music","chosen":"B · war drums","default":"A · calm harp","options":[…],"note":"drums fit a dragon","lesson":"Kept B · war drums for Title music (over A · calm harp, C · music box) — drums fit a dragon","by":"user"}
+{"id":"L-tune-261102151458-fdc","ts":"…","kind":"tuning","game":"<id>","name":"Title music","slug":"title-music","chosen":"B · war drums","default":"A · calm harp","options":[…],"note":"drums fit the boss","lesson":"Kept B · war drums for Title music (over A · calm harp, C · music box) — drums fit the boss","by":"user"}
 ```
 
 ## The CLI

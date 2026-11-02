@@ -8,7 +8,7 @@
 //              {"down": "ShiftLeft"}, {"up": "ShiftLeft"}, {"js": "1+1"}, {"shot": "a.png"},
 //              {"waitFor": "window.game && game.ready", "ms": 5000},
 //              {"expect": "game.sim.buildings.length", "equals": 12},
-//              {"expect": "document.title.includes('Hoard')", "label": "title set"} ] }
+//              {"expect": "document.title.includes('Yak')", "label": "title set"} ] }
 // Keys are KeyboardEvent.code values. {"js"} results are logged to console.txt as [js] lines.
 // Checks: {"expect": js} passes when the value is truthy; with "equals" it must deep-equal that
 // JSON value. {"waitFor": js, "ms": max} polls until truthy and fails on timeout. Any failed

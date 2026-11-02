@@ -9,6 +9,8 @@
   "entry": "game/index.html",
   "assets": "assets.js",
   "edits": "game/art/edits",
+  "sound": "game/sound.js",
+  "soundEdits": "game/sound/edits",
   "designs": {},
   "engine": "1"
 }

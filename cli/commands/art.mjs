@@ -17,6 +17,7 @@ export const commands = {
       let pid, aid, req = null;
       if (pos[0] && pos[0].startsWith('R-')) {
         req = await findRequest(pos[0]);
+        if (req.target && (req.target.song || req.target.sfx)) { await (await import('./sound.mjs')).soundContext(req); return; } // about a song or sound effect
         if (!req.target || !req.target.asset) { printRequest(req, true); out('\n(this request has no target asset: read it, then use context <game> <asset> if needed)'); return; }
         pid = req.scope; aid = req.target.asset;
       } else { pid = (await gameArg(pos[0])).id; aid = D.assertId('asset', pos[1] || ''); }

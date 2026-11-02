@@ -22,3 +22,20 @@ test('every art entry declares its size, anchor and poses, and its anims name on
     }
   }
 });
+
+test('every song and sound effect compiles and renders healthy audio (no NaN, not silent, below full scale)', async () => {
+  const { SOUND } = await import('../game/sound.js'); // nothing plays: the engine renders offline
+  const { renderSong, renderSfx, audioStats } = await import('../../../engine/sound/index.js');
+  for (const id of Object.keys(SOUND.songs)) {
+    const c = SOUND.song(id);
+    assert.deepEqual(c.warnings, [], `song ${id}`);
+    const s = audioStats(renderSong(c, { seconds: 2 }));
+    assert.ok(s.nan === 0 && !s.silent && s.peak < 1, `song ${id}: ${JSON.stringify(s)}`);
+  }
+  for (const id of Object.keys(SOUND.sfx)) {
+    const c = SOUND.effect(id);
+    assert.deepEqual(c.warnings, [], `sfx ${id}`);
+    const s = audioStats(renderSfx(c));
+    assert.ok(s.nan === 0 && !s.silent && s.peak < 1, `sfx ${id}: ${JSON.stringify(s)}`);
+  }
+});

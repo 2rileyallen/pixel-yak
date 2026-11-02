@@ -1,9 +1,11 @@
 // game/main.js — {{NAME}}'s entry point. A placeholder until the first playable: it boots the
-// engine's shell (screen, fixed-step loop, keyboard + pad + mouse) and shows every registered
-// sprite, so the art pipeline (generator → Pixel Yak edits → game) works from day one.
+// engine's shell (screen, fixed-step loop, keyboard + pad + mouse), shows every registered
+// sprite and plays the theme, so the art and sound pipelines (generator → Pixel Yak edits →
+// game) work from day one.
 import { createScreen, createInput, runLoop } from '../../../engine/shell/runtime.js';
 import { text } from '../../../engine/shell/font.js';
 import { ART, sprite } from './sprites.js';
+import { SOUND } from './sound.js';
 
 const W = {{W}}, H = {{H}};
 const screen = createScreen(document.getElementById('game'), { w: W, h: H, background: '#0c1024' });
@@ -11,6 +13,16 @@ const input = createInput().attach(screen);
 const g = screen.g;
 
 const state = { scene: 'placeholder', tick: 0 };
+
+// Browsers start audio only after a click or key press: the first one starts the music.
+function startAudio() {
+  SOUND.unlock();
+  SOUND.music('theme');
+  removeEventListener('keydown', startAudio);
+  removeEventListener('pointerdown', startAudio);
+}
+addEventListener('keydown', startAudio);
+addEventListener('pointerdown', startAudio);
 
 function step() {
   input.update();
@@ -35,4 +47,6 @@ function draw() {
 runLoop(step, draw);
 
 // Pixel Yak: F9 in a studio-launched game attaches this snapshot to the request it opens.
-window.__studioMoment = () => ({ scene: state.scene, tick: state.tick });
+window.__studioMoment = () => ({ scene: state.scene, tick: state.tick, music: SOUND.current() });
+// Pixel Yak's checks read the songs as the game plays them (the AI's, with the user's edits on top).
+window.__studioSound = SOUND;

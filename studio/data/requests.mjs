@@ -61,6 +61,9 @@ function normRequest(scope, r) {
       pose: isId('asset', t.pose) ? t.pose : null,
       anim: isId('asset', t.anim) ? t.anim : null,
       box: t.box && ['x', 'y', 'w', 'h'].every((k) => Number.isFinite(t.box[k])) ? { x: t.box.x | 0, y: t.box.y | 0, w: t.box.w | 0, h: t.box.h | 0 } : null,
+      // a song or sound effect (the Sound view), optionally a section and bars of it
+      song: isId('asset', t.song) ? t.song : null, sfx: isId('asset', t.sfx) ? t.sfx : null,
+      section: isId('asset', t.section) ? t.section : null, bars: Array.isArray(t.bars) ? t.bars.filter(Number.isInteger).slice(0, 2) : null,
     } : null,
     attachments: Array.isArray(r.attachments) ? r.attachments.filter((a) => isId('file', a)) : [],
     createdBy: ['ai', 'web'].includes(r.createdBy) ? r.createdBy : 'user', // web = a player, from an online build
@@ -110,17 +113,20 @@ export async function archiveRequests(scope) {
   return moved;
 }
 
-// attachments: [{ name: 'shot.png', dataUrl: 'data:image/png;base64,…' }]
+const AUDIO_EXT = { 'audio/wav': 'wav', 'audio/x-wav': 'wav', 'audio/wave': 'wav', 'audio/vnd.wave': 'wav', 'audio/mpeg': 'mp3', 'audio/mp3': 'mp3', 'audio/ogg': 'ogg', 'audio/flac': 'flac', 'audio/x-flac': 'flac', 'audio/mp4': 'm4a', 'audio/x-m4a': 'm4a', 'audio/aac': 'aac', 'audio/webm': 'webm', 'audio/midi': 'mid', 'audio/x-midi': 'mid', 'audio/mid': 'mid' };
+// attachments: [{ name: 'shot.png', dataUrl: 'data:image/png;base64,…' }] (or audio/* for a reference recording)
 export async function createRequest(scope, req, attachments = [], by = 'user') {
   const id = newRequestId();
   const dir = requestsDir(scope);
   const names = [];
   for (const [i, a] of attachments.slice(0, 6).entries()) {
-    const m = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(String(a && a.dataUrl || ''));
-    if (!m) continue;
-    const buf = Buffer.from(m[1], 'base64');
-    if (buf.length > 8_000_000) continue;
-    const name = `${id}-${i + 1}.png`;
+    // a picture, or a recording the user attached as a reference (the Sound view; never shipped in a game)
+    const m = /^data:(image\/png|audio\/[a-z0-9.+-]{2,24});base64,([A-Za-z0-9+/=]+)$/.exec(String(a && a.dataUrl || ''));
+    const ext = m && (m[1] === 'image/png' ? 'png' : AUDIO_EXT[m[1]]);
+    if (!ext) continue;
+    const buf = Buffer.from(m[2], 'base64');
+    if (buf.length > (ext === 'png' ? 8_000_000 : 30_000_000)) continue;
+    const name = `${id}-${i + 1}.${ext}`;
     const file = within(dir, name);
     markWrite(file);
     await fs.mkdir(dir, { recursive: true });

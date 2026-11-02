@@ -1,3 +1,5 @@
 # capture-test output (tools/run-captures.mjs) and scratch work
 dev/out/
 node_modules/
+# rendered clips and probe stills (node cli/yak.mjs clip …): made again from the recipes in clips/
+clips/out/

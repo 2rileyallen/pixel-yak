@@ -1,0 +1,17 @@
+{
+  "format": "pixel-yak-clip@1",
+  "title": "Teaser",
+  "aspect": "9:16",
+  "length": 6,
+  "fps": 30,
+  "page": "game/index.html",
+  "ready": "typeof window.__studioMoment === 'function' && window.__studioMoment().tick > 2",
+  "settle": 300,
+  "titleCard": { "from": 0, "to": 2, "text": "{{NAME}}", "sub": "a first look", "backdrop": "dim" },
+  "captions": [
+    { "from": 2.3, "to": 4.3, "text": "Every pixel here is code", "pos": "bottom" }
+  ],
+  "endCard": { "from": 4.5, "to": 6, "text": "{{NAME}}", "sub": "coming soon", "backdrop": "solid" },
+  "music": null,
+  "out": "teaser.mp4"
+}

@@ -8,3 +8,4 @@ export * from './ideas.mjs';
 export * from './lessons.mjs';
 export * from './designs.mjs';
 export * from './scaffold.mjs';
+export * from './clips.mjs';

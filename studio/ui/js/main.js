@@ -11,6 +11,7 @@ import { IdeasView } from './views/ideas.js';
 import { openRequestDialog } from './request-dialog.js';
 import { showHelp } from './help.js';
 import { requestPrompt } from './prompts.js';
+import { brandMark } from './brand.js';
 
 const api = window.studio;
 const ls = {
@@ -102,8 +103,6 @@ class App {
 
   // ================================================================ shell ===
   buildShell() {
-    const logo = h('canvas', { width: 16, height: 16 });
-    drawLogo(logo);
     this.projBtn = h('button.proj-switch', { type: 'button', title: 'Switch game', onclick: (e) => this.projectMenu(e.currentTarget) });
     this.liveEl = h('span.live-pill', { role: 'button', tabIndex: 0, title: 'Live: changes made by you or an AI appear without a restart. Click for the activity log; F5 reloads the art.', onclick: () => this.showActivity(), onkeydown: (e) => { if (e.key === 'Enter') this.showActivity(); } }, h('i.pulse'), h('span', null, 'Live'));
     this.playBtn = h('button.btn.play-btn', { type: 'button', onclick: (e) => this.playClicked(e.currentTarget) });
@@ -116,8 +115,7 @@ class App {
     this.rail.append(h('div.rail-spacer'), h('button.rail-item', { type: 'button', title: 'How the studio works (F1)', onclick: () => showHelp(this) }, icon('help'), h('span', null, 'Help')));
     this.content = h('main.content');
     const top = h('header.topbar', null,
-      h('div.brand', { title: 'Pixel Yak' }, logo),
-      h('div.brand-name', null, 'PIXEL ', h('b', null, 'STUDIO')),
+      ...brandMark(),
       h('span', { style: { width: '1px', height: '22px', background: 'var(--line2)' } }),
       this.projBtn, h('div.grow'), this.liveEl, this.playBtn,
       btn('Ask AI', () => openRequestDialog(this, {}), { kind: 'teal', ico: 'bot', small: true, title: 'New request for the AI about anything' }));
@@ -367,17 +365,6 @@ function setBadge(btnEl, n, cls, title) {
 
 const SW = ['#f4c443', '#3acbc9', '#da63c3', '#ff9d20', '#6c8ee0', '#31cb7b', '#e8705a', '#a46cf0'];
 function swatchColor(id) { let h2 = 0; for (const c of id) h2 = (h2 * 31 + c.charCodeAt(0)) >>> 0; return SW[h2 % SW.length]; }
-
-// 16x16 pixel logo: a tiny gold-ramp gem, drawn like everything else — in code.
-function drawLogo(c) {
-  const g = c.getContext('2d');
-  const rows = [
-    '................', '......kkkk......', '....kkddddkk....', '...kdbbccddek...', '..kdbaabccddek..', '..kbaaabbccdek..', '.kdbaabbbccddek.', '.kdbbbbbcccddek.',
-    '.kddbbccccddeek.', '.kdddccccddeeek.', '..kdddddddeeek..', '..kkeddddeeekk..', '....kkeeeekk....', '......kkkk......', '................', '................',
-  ];
-  const pal = { k: '#0c1024', a: '#fff2a6', b: '#f4c443', c: '#c98b1d', d: '#7c4a10', e: '#3d1f07' };
-  rows.forEach((r, y) => [...r].forEach((ch, x) => { if (pal[ch]) { g.fillStyle = pal[ch]; g.fillRect(x, y, 1, 1); } }));
-}
 
 const app = new App();
 window.__studio = app;

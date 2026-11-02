@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pixel Yak art renderer</title>
+</head>
+<body>
+<!-- tools/render-art.html — the page tools/render-art.cjs drives (file://): loads a game's art
+     registry and hands back PNGs (base64) of poses, strips and compositions, scaled crisp. -->
+<script type="module">
+const game = new URLSearchParams(location.search).get('game');
+const mod = await import(`../games/${game}/assets.js`);
+const byId = new Map((mod.ASSETS || []).map((a) => [a.id, a]));
+
+const canvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; return [c, g]; };
+const need = (id) => { const a = byId.get(id); if (!a) throw new Error(`no asset "${id}" in games/${game}`); return a; };
+
+// One asset: a pose, an animation's frames, or every pose ("all"), side by side.
+function strip({ asset, pose, raw, gap, bg }) {
+  const a = need(asset);
+  const anims = a.anims || {};
+  const frames = !pose ? anims[a.defaultAnim] || a.poses : pose === 'all' ? a.poses : anims[pose] && !a.poses.includes(pose) ? anims[pose] : [pose];
+  const pics = frames.map((f) => (raw ? a.getRaw(f) : a.getCanvas(f)));
+  if (pics.some((p) => !p)) throw new Error(`"${asset}" has no pose ${frames[pics.findIndex((p) => !p)]}`);
+  const [c, g] = canvas(frames.length * a.fw + (frames.length - 1) * gap, a.fh);
+  if (bg) { g.fillStyle = bg; g.fillRect(0, 0, c.width, c.height); }
+  pics.forEach((p, i) => g.drawImage(p, i * (a.fw + gap), 0));
+  return { c, frames };
+}
+
+function compose({ w, h, bg, layers = [] }) {
+  const [c, g] = canvas(w, h);
+  if (bg) { g.fillStyle = bg; g.fillRect(0, 0, w, h); }
+  for (const L of layers) {
+    const a = need(L.asset);
+    const pic = a.getCanvas(L.pose || (a.anims && a.anims[a.defaultAnim] || a.poses)[0]);
+    const [nx, ny] = L.repeat || [1, 1];
+    const x0 = Math.round(L.x || 0) - (L.anchor ? (L.flip ? a.fw - 1 - a.ax : a.ax) : 0);
+    const y0 = Math.round(L.y || 0) - (L.anchor ? a.ay : 0);
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      const x = x0 + i * a.fw, y = y0 + j * a.fh;
+      if (L.flip) { g.save(); g.translate(x + a.fw, y); g.scale(-1, 1); g.drawImage(pic, 0, 0); g.restore(); }
+      else g.drawImage(pic, x, y);
+    }
+  }
+  return { c };
+}
+
+window.renderArt = (job) => {
+  try {
+    const { c, frames } = job.compose ? compose(job.compose) : strip(job);
+    const s = job.scale || 1;
+    const [o, og] = canvas(c.width * s, c.height * s);
+    og.drawImage(c, 0, 0, o.width, o.height);
+    let rgba = null;
+    if (job.rgba) { // raw pixels (for .ico entries), base64 in chunks
+      const d = og.getImageData(0, 0, o.width, o.height).data;
+      let bin = '';
+      for (let i = 0; i < d.length; i += 0x8000) bin += String.fromCharCode(...d.subarray(i, i + 0x8000));
+      rgba = btoa(bin);
+    }
+    return { w: o.width, h: o.height, frames, png: o.toDataURL('image/png').split(',')[1], rgba };
+  } catch (err) { return { error: err.message }; }
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "format": "pixel-yak-clip@1",
+  "title": "Teaser",
+  "aspect": "9:16",
+  "length": 12,
+  "fps": 30,
+  "page": "game/index.html?scene=play&at=100",
+  "ready": "window.__yak && window.__yak.scene() === 'play' && window.__yak.run().tick > 5",
+  "settle": 300,
+  "shot": "teaser.shot.js",
+  "titleCard": { "from": 0, "to": 1.8, "text": "Yak Trail", "sub": "a little climb", "backdrop": "dim" },
+  "captions": [
+    { "from": 2.0, "to": 4.8, "text": "Hop the rocks, munch the grass", "pos": "bottom" },
+    { "from": 6.0, "to": 9.2, "text": "Every pixel and note is code", "pos": "bottom" }
+  ],
+  "endCard": { "from": 10.7, "to": 12, "text": "Yak Trail", "sub": "made with Pixel Yak", "backdrop": "solid" },
+  "music": { "song": "trail" },
+  "probeAt": [1.5, 3.4, 5.4, 7.6, 8.8, 9.8, 11.2],
+  "out": "teaser.mp4"
+}

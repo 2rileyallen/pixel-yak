@@ -19,12 +19,14 @@ import path from 'node:path';
 export const POLL_EXT = new Set(['.js', '.mjs', '.json', '.jsonl', '.html', '.css', '.md']);
 
 // Folders never watched or scanned: dot folders, node_modules, history (archive/: old plans, archived
-// requests and design copies), generated output (dev/out, clips/out) and lesson cards (pictures).
+// requests and design copies), generated output (dev/out, clips/out), lesson cards (pictures) and
+// local/saves (save backups).
 const OUT_PARENTS = new Set(['dev', 'clips']);
 function skipEntry(name, parentDir) {
   const parent = path.basename(parentDir);
   return name.startsWith('.') || name === 'node_modules' || name === 'archive'
-    || (name === 'out' && OUT_PARENTS.has(parent)) || (name === 'cards' && parent === 'lessons');
+    || (name === 'out' && OUT_PARENTS.has(parent)) || (name === 'cards' && parent === 'lessons')
+    || (name === 'saves' && parent === 'local'); // save backups (studio/main/save-backup.mjs): nothing shows them
 }
 function skipRel(rel) {
   const parts = rel.split(/[\\/]/).filter(Boolean);

@@ -12,7 +12,7 @@
 // - `electron . --capture=<steps.json> --out=<dir>` drives the studio headless and saves
 //   screenshots (the look-at-your-work loop for the studio itself, see docs/STUDIO.md).
 
-import { app, BrowserWindow, ipcMain, protocol, shell, Menu, session } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol, shell, Menu, session, dialog } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
@@ -20,6 +20,7 @@ import os from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as D from '../data/index.mjs';
 import { createWatcher } from './watch.mjs';
+import { backupWindow, latestBackup, restoreJs, EMPTY_JS, EVERY_MS, TEST_DIR } from './save-backup.mjs';
 
 const ROOT = D.ROOT;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -226,10 +227,40 @@ async function launchGame(projectId) {
     if (input.key === 'F5') { e.preventDefault(); win.webContents.reload(); }
     if (input.key === 'F12') { e.preventDefault(); win.webContents.toggleDevTools(); }
   });
-  win.on('closed', () => { games.delete(projectId); toStudio('game:status', { projectId, running: false }); });
+  // The person's saves live in this window's storage: copy them to local/saves/<id>/ as the window
+  // closes and every few minutes while it runs (studio/main/save-backup.mjs). Capture runs only when a
+  // test points the backups elsewhere (PIXEL_YAK_SAVES_DIR).
+  const backups = !CAPTURE || !!TEST_DIR;
+  let closing = false;
+  const backupTimer = !backups ? null : setInterval(() => backupWindow(projectId, win), EVERY_MS);
+  win.on('close', (e) => {
+    if (!backups || closing) return;
+    closing = true;
+    e.preventDefault();
+    backupWindow(projectId, win).finally(() => { if (!win.isDestroyed()) win.close(); });
+  });
+  win.on('closed', () => { clearInterval(backupTimer); games.delete(projectId); toStudio('game:status', { projectId, running: false }); });
+  if (backups) await offerRestore(p, win, origin).catch((err) => console.error(`[studio] ${projectId}: saves not restored:`, err.message));
   await win.loadURL(origin + p.gamePath);
   toStudio('game:status', { projectId, running: true });
   return { running: true };
+}
+
+// A game with no saves at all on this computer (a new computer, a reinstall, a cleaned profile) whose
+// saves were backed up: ask before putting them back. Saves that are there are never written over.
+async function offerRestore(p, win, origin) {
+  const b = await latestBackup(p.id);
+  if (!b) return;
+  await win.loadURL(origin + 'studio/ui/storage.html');
+  if (!(await win.webContents.executeJavaScript(EMPTY_JS, true))) return;
+  const when = b.at ? new Date(b.at).toLocaleString() : 'earlier';
+  // a capture run testing backups says yes by itself (a dialog would wait forever headless)
+  const { response } = CAPTURE ? { response: 0 } : await dialog.showMessageBox(win, {
+    type: 'question', buttons: ['Restore my saves', 'Start without them'], defaultId: 0, cancelId: 1, noLink: true,
+    title: 'Restore saves?', message: `${p.name} has no saves on this computer yet.`,
+    detail: `Pixel Yak kept a copy of your saves from ${when} (local/saves/${p.id}/). Put them back before the game starts?`,
+  });
+  if (response === 0) await win.webContents.executeJavaScript(restoreJs(b.text), true);
 }
 
 // Feature modules add to an F9 moment: onMoment(async (projectId, win, moment) => ({ …more }))

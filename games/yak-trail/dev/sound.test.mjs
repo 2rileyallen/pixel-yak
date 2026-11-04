@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { SOUND, SONGS, SFX } from '../game/sound.js';
-import { renderSong, renderSfx, audioStats } from '../../../engine/sound/index.js';
+import { renderSong, renderSfx, audioStats } from '../engine/sound/index.js';
 
 test('the songs are there: the trail theme loops, the summit fanfare plays once', () => {
   assert.equal(SONGS.trail.loop, true);

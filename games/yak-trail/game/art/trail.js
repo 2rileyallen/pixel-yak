@@ -1,8 +1,8 @@
 // art/trail.js — what the trail is made of: ground strips (the surface, laid along the slope column by
 // column), the fill under it (tiled on the world grid), rocks, grass tufts, cairns and the summit
 // bunting. One pose per zone where the look changes (meadow · rocky · snow).
-import { Pix } from '../../../../engine/art/pix.js';
-import { hash } from '../../../../engine/shell/runtime.js';
+import { Pix } from '../../engine/art/pix.js';
+import { hash } from '../../engine/shell/runtime.js';
 import { M, FIN, FIN_FLAT } from '../../design/palette.js';
 
 const T = 16;

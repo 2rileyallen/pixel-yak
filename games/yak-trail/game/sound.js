@@ -3,7 +3,7 @@
 // design/instruments.js. Pixel Yak's Sound view shows every song here as a grid the user can
 // edit; their changes live in sound/edits/ and are laid on top at load — never hand-edit those
 // files, and never rewrite a song to undo them (skill sound). How it should sound: design/sound.md.
-import { defineSound } from '../../../engine/sound/index.js';
+import { defineSound } from '../engine/sound/index.js';
 import { INSTRUMENTS } from '../design/instruments.js';
 import { SOUND_EDITS } from './sound/edits/index.js';
 

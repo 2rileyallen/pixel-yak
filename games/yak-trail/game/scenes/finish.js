@@ -1,6 +1,6 @@
 // scenes/finish.js — the summit panel: your time, the tufts you munched, and the best so far (kept in
 // the browser). Again · Title.
-import { text } from '../../../../engine/shell/font.js';
+import { text } from '../../engine/shell/font.js';
 import { drawSprite } from '../sprites.js';
 import { clock } from '../sim.js';
 import { W } from '../world.js';

@@ -1,8 +1,8 @@
 // scenes/play.js — the climb: reads the controls, steps the sim (sim.js) with the feel of the F8
 // knobs, turns its events into little effects and sounds, moves the camera, draws the world and the
 // HUD. Esc pauses (everything freezes); the summit plays the fanfare and brings up the finish panel.
-import { text } from '../../../../engine/shell/font.js';
-import { ditherFill } from '../../../../engine/shell/runtime.js';
+import { text } from '../../engine/shell/font.js';
+import { ditherFill } from '../../engine/shell/runtime.js';
 import { drawSprite } from '../sprites.js';
 import { newRun, step, floorAt, clock, loadRun } from '../sim.js';
 import { zoneAt } from '../level.js';

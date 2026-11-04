@@ -3,7 +3,7 @@
 // (sprites.js); nothing here picks a colour. The title screen and the play scene both use it.
 import { GAP, zoneAt } from './level.js';
 import { sprite, drawSprite, animPose, ART } from './sprites.js';
-import { hash } from '../../../engine/shell/runtime.js';
+import { hash } from '../engine/shell/runtime.js';
 
 export const W = 320, H = 180;
 const ZONES = ['meadow', 'rocky', 'snow'];

@@ -3,34 +3,45 @@
 //   slotStore(prefix, opts)        — synchronous, plain JSON in localStorage, one key per slot.
 //   await openSlots(prefix, opts)  — asynchronous, IndexedDB: no size wall, backups, failures reported.
 // A game that outgrows localStorage moves to openSlots; its first open copies the old slots in.
+//
+// Versions: `version` is the save format's number. An older save is brought forward one version at a
+// time through `migrations` ({ 1: (save) => saveV2, 2: … }, each returns the next version's data);
+// `migrate(old) → new | null` (one function for everything) still works. A save that can't be brought
+// forward — too old, from a newer build, or bad JSON — is never silently lost: before anything goes
+// over it, its raw text is kept aside (`kept(n)`), and exportSlot / importSlot move a save to and from
+// a file. `v` and `savedAt` are written into the save's top level: don't use those two names for
+// your own fields. A game made of systems (engine/shell/systems.js) versions each system on its own
+// and rarely needs to bump this number.
 
 // ------------------------------------------------------------------------------- slotStore ---
 // One key per slot, plus the last slot played so a title screen can preselect it.
-//   const saves = slotStore('my-game', { version: 1 });   // or { version: 2, migrate: (old) => newOrNull }
+//   const saves = slotStore('my-game', { version: 2, migrations: { 1: (s) => ({ ...s, coins: 0 }) } });
 //   saves.write(1, state); saves.read(1); saves.last(); saves.erase(1);
-export function slotStore(prefix, { slots = [1, 2, 3], version = 1, migrate = null } = {}) {
+//   saves.exportSlot(1) → the save as text (or null) · saves.importSlot(1, text) → { ok, error }
+//   saves.kept(1) → the raw text of a save that couldn't be read, kept before it was written over (or null)
+export function slotStore(prefix, { slots = [1, 2, 3], version = 1, migrations = null, migrate = null } = {}) {
   const key = (n) => `${prefix}.slot${n}`;
   const lastKey = `${prefix}.last`;
   const get = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
   const set = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (_) { return false; } };
   const valid = (n) => slots.includes(n);
+  const bring = (raw) => bringForward(JSON.parse(raw), version, migrations, migrate);
+  const readable = (raw) => { try { bring(raw); return true; } catch (_) { return false; } };
 
   return {
     SLOTS: slots,
-    // The stored object (with savedAt / v) or null when empty, unreadable or from another version
-    // (a game that passes `migrate` gets older saves brought up to date instead; null = can't).
+    // The stored object (with savedAt / v), brought forward to this version; null when empty or when
+    // it can't be read or brought forward (its text stays where it is until a write keeps it aside).
     read(n) {
       if (!valid(n)) return null;
       const raw = get(key(n));
       if (!raw) return null;
-      try {
-        const d = JSON.parse(raw);
-        if (d && d.v === version) return d;
-        return d && migrate ? migrate(d) || null : null;
-      } catch (_) { return null; }
+      try { return bring(raw); } catch (_) { return null; }
     },
     write(n, data) {
       if (!valid(n)) return false;
+      const old = get(key(n));
+      if (old && !readable(old)) set(`${key(n)}.kept`, old); // never write over a save nobody could read
       const ok = set(key(n), JSON.stringify({ ...data, v: version, savedAt: Date.now() }));
       if (ok) set(lastKey, String(n));
       return ok;
@@ -41,7 +52,29 @@ export function slotStore(prefix, { slots = [1, 2, 3], version = 1, migrate = nu
       if (this.last() === n) { try { localStorage.removeItem(lastKey); } catch (_) { /* ignore */ } }
     },
     last() { const n = Number(get(lastKey)); return valid(n) ? n : null; },
+    exportSlot(n) { return valid(n) ? get(key(n)) : null; },
+    importSlot(n, text) {
+      if (!valid(n)) return { ok: false, error: `no slot ${n}` };
+      let d;
+      try { d = bring(String(text)); } catch (e) { return { ok: false, error: String(e && e.message) }; }
+      return this.write(n, d) ? { ok: true } : { ok: false, error: 'storage refused the write' };
+    },
+    kept(n) { return valid(n) ? get(`${key(n)}.kept`) : null; },
   };
+}
+
+// A parsed save brought forward to `version` (see the top of this file), or an Error thrown saying why not.
+export function bringForward(d, version, migrations = null, migrate = null) {
+  if (!d || typeof d !== 'object') throw new Error('not a save');
+  if (d.v === version) return d;
+  if (Number.isInteger(d.v) && d.v > version) throw new Error(`a save from a newer build (version ${d.v}; this build reads up to ${version})`);
+  if (migrations && Number.isInteger(d.v)) {
+    let v = d.v, cur = d;
+    while (v < version && typeof migrations[v] === 'function') { cur = { ...migrations[v](cur), v: v + 1 }; v++; }
+    if (v === version) return cur;
+  }
+  if (migrate) { const m = migrate(d); if (m) return m; }
+  throw new Error(`a save of version ${d.v} that can't be brought forward`);
 }
 
 // ------------------------------------------------------------------------------- openSlots ---
@@ -69,10 +102,13 @@ export function slotStore(prefix, { slots = [1, 2, 3], version = 1, migrate = nu
 //   await saves.write(n, state)                    → true, or false with saves.failed = { slot, error }
 //   saves.info(n) / await saves.check(n)           → null (empty) or { sum, savedAt, backup, damaged }
 //   await saves.erase(n); saves.last(); saves.has(n); saves.SLOTS; saves.kind ('indexeddb' | 'localstorage' | 'memory')
-export async function openSlots(prefix, { slots = [1, 2, 3], version = 1, migrate = null, legacy = true, summary = null } = {}) {
+//   await saves.exportSlot(n) → the save as text (to download) · await saves.importSlot(n, text) → { ok, error }
+//   await saves.kept(n) → raw texts of saves that couldn't be read (kept the moment they failed to load)
+//   await saves.persist() → asks the browser not to clear the saves under storage pressure (true if granted)
+export async function openSlots(prefix, { slots = [1, 2, 3], version = 1, migrations = null, migrate = null, legacy = true, summary = null } = {}) {
   let kv = (await openIdb(`${prefix}.saves`)) || lsKv(`${prefix}.saves.`);
   const valid = (n) => slots.includes(n);
-  const rec = (n, i) => `slot${n}.${i}`, headKey = (n) => `head${n}`;
+  const rec = (n, i) => `slot${n}.${i}`, headKey = (n) => `head${n}`, keptKey = (n, i) => `kept${n}.${i}`;
   // slot → { cur: 0 | 1, savedAt, bytes, sum, prev }: `sum` the current save's summary, `prev` the other
   // record (the backup) as { savedAt, bytes, sum } or null
   const heads = new Map();
@@ -119,13 +155,14 @@ export async function openSlots(prefix, { slots = [1, 2, 3], version = 1, migrat
 
   const parse = (raw) => {
     if (typeof raw !== 'string') throw new Error('no save there');
-    const d = JSON.parse(raw);
-    if (d && d.v === version) return d;
-    const m = d && migrate ? migrate(d) : null;
-    if (!m) throw new Error(`a save of version ${d && d.v} that can't be brought forward`);
-    return m;
+    return bringForward(JSON.parse(raw), version, migrations, migrate);
   };
-  const attempt = async (n, i, accept) => { const [raw] = await kv.get([rec(n, i)]); const data = parse(raw); return { value: accept(data), data }; };
+  // A record that can't be read is copied aside at once, so the saves that later go over it lose nothing.
+  const keep = (n, i, raw) => { if (typeof raw === 'string' && raw) kv.put([[keptKey(n, i), raw]]).catch(() => {}); };
+  const attempt = async (n, i, accept) => {
+    const [raw] = await kv.get([rec(n, i)]);
+    try { const data = parse(raw); return { value: accept(data), data }; } catch (e) { keep(n, i, raw); throw e; }
+  };
   const summed = (data) => { try { return summary(data); } catch (e) { console.warn(`[saves] ${prefix}: no summary (${e && e.message})`); return null; } };
 
   // Heads from before summaries (or copied in above): each record read once, its summary kept in the head.
@@ -137,7 +174,7 @@ export async function openSlots(prefix, { slots = [1, 2, 3], version = 1, migrat
       if (!h || 'sum' in h) continue;
       const read = async (i) => {
         const [raw] = await kv.get([rec(n, i)]);
-        try { const d = parse(raw); return { savedAt: d.savedAt || 0, bytes: raw.length, sum: summed(d) }; } catch (_) { return null; }
+        try { const d = parse(raw); return { savedAt: d.savedAt || 0, bytes: raw.length, sum: summed(d) }; } catch (_) { keep(n, i, raw); return null; }
       };
       const a = await read(h.cur).catch(() => null), b = await read(1 - h.cur).catch(() => null);
       if (a) { const nh = { ...h, sum: a.sum, prev: b }; heads.set(n, nh); puts.push([headKey(n), nh]); }
@@ -223,6 +260,26 @@ export async function openSlots(prefix, { slots = [1, 2, 3], version = 1, migrat
         if (wasDamaged) damaged.add(n);
         return fail(n, e);
       });
+    },
+    async exportSlot(n) {
+      const h = valid(n) && heads.get(n);
+      if (!h) return null;
+      const i = bad.get(n) === h.cur ? 1 - h.cur : h.cur;
+      const [raw] = await kv.get([rec(n, i)]);
+      return typeof raw === 'string' ? raw : null;
+    },
+    async importSlot(n, text) {
+      if (!valid(n)) return { ok: false, error: `no slot ${n}` };
+      let d;
+      try { d = parse(String(text)); } catch (e) { return { ok: false, error: String(e && e.message) }; }
+      return (await store.write(n, d)) ? { ok: true } : { ok: false, error: (store.failed && store.failed.error) || 'not saved' };
+    },
+    async kept(n) {
+      if (!valid(n)) return [];
+      return (await kv.get([keptKey(n, 0), keptKey(n, 1)])).filter((r) => typeof r === 'string');
+    },
+    async persist() {
+      try { return typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist ? await navigator.storage.persist() : false; } catch (_) { return false; }
     },
     async erase(n) {
       if (!valid(n)) return;

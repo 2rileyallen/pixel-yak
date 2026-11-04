@@ -1,7 +1,7 @@
 // scenes/pause.js — Esc while climbing: everything under it freezes. Resume · Help · Timer on/off ·
 // Restart · Title. Help (how to play) lives here and only here: it scrolls, with a scrollbar.
-import { text, wrap, LINE_H } from '../../../../engine/shell/font.js';
-import { ditherFill } from '../../../../engine/shell/runtime.js';
+import { text, wrap, LINE_H } from '../../engine/shell/font.js';
+import { ditherFill } from '../../engine/shell/runtime.js';
 import { W, H } from '../world.js';
 import { C, M } from '../../design/palette.js';
 

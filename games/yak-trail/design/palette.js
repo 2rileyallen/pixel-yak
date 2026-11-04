@@ -4,7 +4,7 @@
 // cool shadows / warm highlights. Sprite code never holds RGB: it paints materials, and C(mat, shade)
 // gives UI code a ramp stop as a CSS colour.
 
-import { hexRgb } from '../../../engine/art/pix.js';
+import { hexRgb } from '../engine/art/pix.js';
 
 export const M = {
   INK: 1, SKIN: 2, HAIR: 3, TUNIC: 4, WHITE: 5, NAVY: 6, RUST: 7, GOLD: 8, BOOT: 9,

@@ -3,11 +3,11 @@
 // and the capture tests use.
 //   scenes/title.js → scenes/play.js (with scenes/pause.js and scenes/finish.js on top)
 // The rules live in sim.js, the trail in level.js, the drawing in world.js, the sound in sound.js.
-import { createScreen, createInput, Director, runLoop } from '../../../engine/shell/runtime.js';
-import { useFontArt, measure } from '../../../engine/shell/font.js';
-import { createWidgets } from '../../../engine/shell/widgets.js';
-import { slotStore } from '../../../engine/shell/saves.js';
-import { studio } from '../../../engine/link/studio.js';
+import { createScreen, createInput, Director, runLoop } from '../engine/shell/runtime.js';
+import { useFontArt, measure } from '../engine/shell/font.js';
+import { createWidgets } from '../engine/shell/widgets.js';
+import { slotStore } from '../engine/shell/saves.js';
+import { studio } from '../engine/link/studio.js';
 import { sprite, ARTKIT } from './sprites.js';
 import { buildLevel } from './level.js';
 import { TUNE, HOP_PX, hopFor, saveRun } from './sim.js';

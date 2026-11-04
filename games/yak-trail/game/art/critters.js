@@ -1,6 +1,6 @@
 // art/critters.js — a mountain bird (black, red beak and legs) that pecks on the trail and flaps off
 // when the yak trots near, and the little effects: grass bits, dust puffs, snow puffs, a sparkle.
-import { Pix } from '../../../../engine/art/pix.js';
+import { Pix } from '../../engine/art/pix.js';
 import { M, FIN, FIN_FX } from '../../design/palette.js';
 
 // Bird, facing right. Perched: body + tail + legs; flying: wings up / level / down.

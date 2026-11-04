@@ -1,9 +1,9 @@
 // game/sprites.js — THE ART CONTRACT for Yak Trail (engine/art/registry.js, docs/contracts/ART.md).
 // Game code only calls sprite(id, pose) / drawSprite(...). Every entry shows up in Pixel Yak by
 // itself — including the font and the UI widgets, so the user can repaint the text and the boxes too.
-import { createArt } from '../../../engine/art/registry.js';
-import { fontArt } from '../../../engine/art/font-art.js';
-import { widgetArt } from '../../../engine/art/widget-art.js';
+import { createArt } from '../engine/art/registry.js';
+import { fontArt } from '../engine/art/font-art.js';
+import { widgetArt } from '../engine/art/widget-art.js';
 import { EDITS } from './art/edits/index.js';
 import { M, HEXRAMPS, GLOW, FIN } from '../design/palette.js';
 import { YAK_ART } from './art/yak.js';

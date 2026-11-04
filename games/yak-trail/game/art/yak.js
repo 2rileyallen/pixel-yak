@@ -2,7 +2,7 @@
 // feet on the bottom row (anchor 15, 23). One draw function; every pose is a row in the pose table
 // (body bob, each leg's step and lift, head dip, hair sway, tail, eyes), so new poses stay on model.
 // Shaggy coat that hangs low, a fringe over the eyes, cream horns, little dark hooves.
-import { Pix } from '../../../../engine/art/pix.js';
+import { Pix } from '../../engine/art/pix.js';
 import { M, FIN } from '../../design/palette.js';
 
 const W = 32, H = 24;

@@ -24,6 +24,7 @@ example game of Pixel Yak: small, clean code a new game can copy the shape of.
 | `CHANGELOG.md` | One short entry per change the user can play | "what changed?" |
 | `ENGINEERING.md` | Code map, how to run and check it | code work |
 | `game/` | The game: `main.js` boots it, `sprites.js` is the art contract, `art/` the generators, `art/edits/` the user's pixels, `sound.js` the songs + sound effects, `sound/edits/` the user's notes and knobs (never hand-edit either edits folder) | |
+| `engine/` | Yak Trail's own copy of the engine (v2): don't edit it here (`node cli/yak.mjs engine yak-trail`) | engine questions |
 | `requests/` | This game's tickets with the user (an F9 moment adds `<R-id>-save.json`) | skill requests |
 | `tuning/` | F8 choices the user kept while playing, waiting to be built in (`node cli/yak.mjs tuning yak-trail`) | after the user tunes |
 | `clips/` | Promo clip recipes (`teaser`); renders land in `clips/out/` (not committed) | skill promo |

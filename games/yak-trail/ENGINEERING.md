@@ -61,5 +61,11 @@ A big game reads skill optimize before it grows (`docs/LESSONS.md` → building 
 
 ## Saves
 One record in `localStorage` through `slotStore('yak-trail', { slots: [1], version: 1 })`:
-`{ best (ticks), bestTufts, timer }`. A new version number drops old records (they hold nothing
-precious).
+`{ best (ticks), bestTufts, timer }`. A new version number needs a migration
+(`migrations: { 1: (r) => … }`); a record that can't be read is kept aside, never written over.
+
+## The engine copy
+`engine/` is Yak Trail's own copy of Pixel Yak's engine (v2; `engine/version.json`). Don't edit it here:
+`node cli/yak.mjs engine yak-trail` shows what the harness has that it doesn't, `engine-pull yak-trail`
+brings it in (then `test yak-trail --full` and look). Yak Trail is a 1–3 minute toy, so its rules are
+one pure `sim.js` rather than the template's `game/systems/`; a new game starts from the template.

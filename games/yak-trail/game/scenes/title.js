@@ -1,6 +1,6 @@
 // scenes/title.js — the title: the foot of the trail, the yak grazing, the logo, the best run so far.
 // Space / Enter / pad A starts.
-import { text } from '../../../../engine/shell/font.js';
+import { text } from '../../engine/shell/font.js';
 import { drawSprite, animPose } from '../sprites.js';
 import { makeBirds, W } from '../world.js';
 import { clock } from '../sim.js';

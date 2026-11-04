@@ -1,8 +1,8 @@
 // art/ui.js — Yak Trail's own UI art: the title logo (the font's letters, built up into chunky gold
 // blocks with snow on top) and the little HUD icons. The font and the widgets (boxes, bars,
 // checkboxes) come from the engine: engine/art/font-art.js and engine/art/widget-art.js.
-import { Pix } from '../../../../engine/art/pix.js';
-import { glyphRows } from '../../../../engine/shell/font.js';
+import { Pix } from '../../engine/art/pix.js';
+import { glyphRows } from '../../engine/shell/font.js';
 import { M, FIN } from '../../design/palette.js';
 
 const LW = 176, LH = 34, B = 3; // logo frame; each font pixel becomes a B×B block

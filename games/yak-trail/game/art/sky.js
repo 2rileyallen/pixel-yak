@@ -1,7 +1,7 @@
 // art/sky.js — the backdrop: a banded sky (ordered dither between ramp stops, never a smooth
 // gradient), two ranges of mountains that scroll slower than the trail (parallax), and clouds.
 // Mountains tile left to right: their outlines repeat exactly every frame width.
-import { Pix, bayer } from '../../../../engine/art/pix.js';
+import { Pix, bayer } from '../../engine/art/pix.js';
 import { M, FIN_FLAT } from '../../design/palette.js';
 
 // Sky: five bands of the DAY ramp, dark at the top, dithered into each other.

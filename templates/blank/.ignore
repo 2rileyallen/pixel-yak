@@ -1,0 +1,3 @@
+# Searches (ripgrep, and the AI tools built on it) skip these: history, never the current truth.
+# Read a file in them directly when a question is about the past.
+archive/

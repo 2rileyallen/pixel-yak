@@ -3,3 +3,5 @@ dev/out/
 node_modules/
 # rendered clips and probe stills (node cli/yak.mjs clip …): made again from the recipes in clips/
 clips/out/
+# a write that never finished (the studio writes through a temp file)
+*.tmp

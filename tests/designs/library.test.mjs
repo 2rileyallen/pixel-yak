@@ -69,9 +69,9 @@ test('use refuses over a game\'s own copy; force archives it; promote and diff r
     assert.ok(r2.archived.length >= 1);
     assert.match(await fs.readFile(path.join(gameDir, 'design', 'game.md'), 'utf8'), /## The user's first notes[\s\S]*tiny frogs/);
     // diff: same as the library until the game changes
-    assert.equal((await D.diffDesign(id, 'art')).files.find((f) => f.file === 'art.md').status, 'same');
+    assert.equal((await D.diffDesign(id, 'art')).files.find((f) => f.file === 'design/art.md').status, 'same');
     await fs.appendFile(path.join(gameDir, 'design', 'art.md'), '\n- A rule of this game (#1).\n');
-    assert.match((await D.diffDesign(id, 'art')).files.find((f) => f.file === 'art.md').diff, /^-- A rule of this game/m);
+    assert.match((await D.diffDesign(id, 'art')).files.find((f) => f.file === 'design/art.md').diff, /^-- A rule of this game/m);
     // promote: a new local entry with a changelog line and the palette, no copy note
     const p = await D.promoteDesign(id, 'art', newId, { local: true, title: 'Promoted Look' });
     const md = await fs.readFile(path.join(D.ROOT, p.dir, 'DESIGN.md'), 'utf8');
@@ -81,7 +81,31 @@ test('use refuses over a game\'s own copy; force archives it; promote and diff r
     assert.ok(p.written.some((f) => f.endsWith('/palette.js')));
     await assert.rejects(D.promoteDesign(id, 'art', newId, { local: true }), /already an art design/);
   } finally {
-    await fs.rm(gameDir, { recursive: true, force: true });
-    await fs.rm(path.join(D.DIRS.localDesigns, 'art', newId), { recursive: true, force: true });
+    await fs.rm(gameDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 150 }); // an editor or the indexer may hold a new folder for a moment (EBUSY)
+    await fs.rm(path.join(D.DIRS.localDesigns, 'art', newId), { recursive: true, force: true, maxRetries: 20, retryDelay: 150 }); // an editor or the indexer may hold a new folder for a moment (EBUSY)
+  }
+});
+
+test('systems shelf: a system copies into a game on its own engine, and promotes back out general', async () => {
+  const id = `zz-systems-test-${process.pid}`;
+  const newId = `zz-camera-${process.pid}`;
+  const gameDir = path.join(D.DIRS.games, id);
+  try {
+    await D.createProject({ id, name: 'Systems test' });
+    const r = await D.useDesign(id, 'systems', 'follow-camera');
+    assert.deepEqual(r.written.sort(), ['design/systems/follow-camera.md', 'dev/systems/follow-camera.test.mjs', 'game/systems/follow-camera/index.js']);
+    const test = await fs.readFile(path.join(gameDir, 'dev', 'systems', 'follow-camera.test.mjs'), 'utf8');
+    assert.match(test, /from '\.\.\/\.\.\/engine\/shell\/systems\.js'/, 'the engine import points at the game\'s own copy');
+    assert.match(test, /from '\.\.\/\.\.\/game\/systems\/follow-camera\/index\.js'/, 'the test finds the system where it landed');
+    assert.deepEqual((await D.readJson(path.join(gameDir, 'game.json'))).designs.systems, ['follow-camera']);
+    await assert.rejects(D.useDesign(id, 'systems', 'follow-camera'), /already has its own follow-camera system/);
+    const p = await D.promoteDesign(id, 'systems', newId, { local: true, system: 'follow-camera' });
+    assert.deepEqual(p.leaks, []);
+    const back = await fs.readFile(path.join(D.ROOT, p.dir, 'follow-camera.test.mjs'), 'utf8');
+    assert.match(back, /from '\.\/index\.js'/);
+    assert.match(back, /from '\.\.\/\.\.\/\.\.\/\.\.\/engine\/shell\/systems\.js'|from '\.\.\/\.\.\/\.\.\/engine\/shell\/systems\.js'/);
+  } finally {
+    await fs.rm(gameDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 150 });
+    await fs.rm(path.join(D.DIRS.localDesigns, 'systems', newId), { recursive: true, force: true, maxRetries: 20, retryDelay: 150 });
   }
 });

@@ -1,8 +1,9 @@
 // studio/data/scaffold.mjs — a new game: copies templates/<template>/ into games/<id>/, fills in its
 // name and size, copies the design files it starts from (one per shelf, from the library or
-// local/designs) into its design/ folder, files a kickoff request for the AI (skill new-game), and
-// makes the game its own git repo with a first commit (games/ is ignored by the harness's git).
-// Also: checkProject, the quick structural check behind `yak check`.
+// local/designs) into its design/ folder, gives it its own copy of the engine (games/<id>/engine/, so a
+// harness engine change never reaches it by itself), files a kickoff request for the AI (skill
+// new-game), and makes the game its own git repo with a first commit (games/ is ignored by the
+// harness's git). Also: checkProject, the quick structural check behind `yak check`.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -11,6 +12,7 @@ import { normalizeProject, getProject, SIZES } from './games.mjs';
 import { readAllEdits } from './edits.mjs';
 import { createRequest } from './requests.mjs';
 import { copyDesign, findDesign } from './designs.mjs';
+import { copyEngine, engineStatus, outsideImports, harnessEngineVersion } from './engine-copy.mjs';
 
 const TEXT = new Set(['.md', '.js', '.mjs', '.cjs', '.json', '.html', '.css', '.txt']);
 
@@ -43,7 +45,7 @@ export async function createProject(opts) {
   try {
     return await makeGame(opts, id, dir, tdir);
   } catch (err) {
-    await fs.rm(dir, { recursive: true, force: true }).catch(() => {}); // never leave half a game behind
+    await fs.rm(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 150 }).catch(() => {}); // never leave half a game behind
     throw err;
   }
 }
@@ -52,7 +54,11 @@ export async function createProject(opts) {
 // recorder (it films committed work). No remote — pushing is the user's call (skill collaborate).
 function initRepo(dir, name) {
   const git = (...args) => spawnSync('git', args, { cwd: dir, encoding: 'utf8' });
-  if (git('init', '-q', '-b', 'main').status !== 0) return { repo: false, commit: false };
+  // `-b` needs git 2.28+; an older git makes the repo, then names the branch
+  if (git('init', '-q', '-b', 'main').status !== 0) {
+    if (git('init', '-q').status !== 0) return { repo: false, commit: false };
+    git('symbolic-ref', 'HEAD', 'refs/heads/main');
+  }
   git('add', '-A');
   const c = git('commit', '-q', '-m', `${name}: made with Pixel Yak`);
   return { repo: true, commit: c.status === 0 };
@@ -63,10 +69,12 @@ async function makeGame(opts, id, dir, tdir) {
   const W = Math.max(64, Math.min(1920, Number(res.width) || 320));
   const H = Math.max(64, Math.min(1080, Number(res.height) || 180));
   const scale = Math.max(1, Math.min(8, Number(res.pixelScale) || 3));
-  const name = str(opts.name, 120) || id.toUpperCase();
+  const name = str(opts.name, 120).replace(/\s+/g, ' ').trim() || id.toUpperCase();
   const t = nowIso();
+  const safe = name.replace(/[<>&"`$\\]/g, '');
   const vars = {
-    ID: id, NAME: name.replace(/[<>&"`$\\]/g, ''), W: String(W), H: String(H), SCALE: String(scale), DATE: t.slice(0, 10),
+    // NAME goes into Markdown, HTML and JSON strings; NAMEJS is a quoted JavaScript string ("Kid's Quest")
+    ID: id, NAME: safe, NAMEJS: JSON.stringify(safe), W: String(W), H: String(H), SCALE: String(scale), DATE: t.slice(0, 10),
     GENRE: str(opts.genre, 120).replace(/[<>&"`$\\]/g, '') || '(undecided)', SIZE: SIZES.includes(opts.size) ? opts.size : 'toy',
   };
   for (const rel of await listFiles(tdir)) {
@@ -75,6 +83,8 @@ async function makeGame(opts, id, dir, tdir) {
     if (TEXT.has(path.extname(rel).toLowerCase())) await writeTextMarked(out, fill(await fs.readFile(src, 'utf8'), vars));
     else { await fs.mkdir(path.dirname(out), { recursive: true }); await fs.copyFile(src, out); }
   }
+  // its own engine (engine/README.md): the harness's engine as it is today, recorded in engine/COPY.json
+  copyEngine(id);
   // the design files it starts from
   const designs = {};
   for (const shelf of ['art', 'sound', 'game']) {
@@ -105,7 +115,8 @@ async function makeGame(opts, id, dir, tdir) {
       'New game made in Pixel Yak. Follow skill new-game with the user:',
       `1. Read games/${id}/AGENTS.md and design/ (the files it starts from: ${Object.entries(designs).map(([k, v]) => `${k} ${v}`).join(', ') || 'none picked yet'})${game.idea ? `, plus local/ideas/${game.idea}.md` : ''}.`,
       '2. Ask only what blocks you (the fantasy and the core verb, genre and camera, the look, the size); default the rest and list it.',
-      '3. Brief the user on the first playable before writing code, then build it and get them playing.',
+      '3. Name the first systems (game/systems/, one page each in design/systems/); check the systems shelf (node cli/yak.mjs designs systems) before writing one from scratch.',
+      '4. Brief the user on the first playable before writing code, then build it and get them playing.',
     ].join('\n'),
   }, [], 'user');
   const git = opts.git === false ? { repo: false, commit: false } : initRepo(dir, name);
@@ -127,6 +138,43 @@ export async function checkProject(id) {
     if (errs.length) out.push(`ERROR ${p.editsDir}/${asset}.json: ${errs.join('; ')}`);
   }
   if (!exists(path.join(DIRS.games, id, 'AGENTS.md'))) out.push(`WARN games/${id}/AGENTS.md missing — the one page an AI reads first`);
+  // a game never reaches outside its folder (AGENTS.md hard line 5): not into another game, not into the harness
+  for (const x of outsideImports(id).slice(0, 20)) out.push(`${x.level === 'error' ? 'ERROR' : 'WARN'} ${path.relative(path.join(DIRS.games, id), x.file).split(path.sep).join('/')}:${x.line} imports ${x.spec} — that is ${x.where}; a game only uses its own folder`);
+  const eng = engineStatus(id);
+  if (!eng.own) out.push(`WARN no engine copy of its own: it runs on the harness's engine, so any change there reaches it at once (node cli/yak.mjs engine-adopt ${id})`);
+  else if (String(eng.version) !== String(harnessEngineVersion())) out.push(`INFO engine v${eng.version}; the harness has v${harnessEngineVersion()} (node cli/yak.mjs engine ${id})`);
+  out.push(...(await readingBudget(id)));
+  return out;
+}
+
+// The reading budget (docs/contracts/README.md → A game's pages): a page an AI reads before a task
+// stays short however big the game grows, so starting any task costs a few thousand tokens.
+export const PAGE_WORDS = [
+  ['AGENTS.md', 1000, 'keep it one page: point at files instead of repeating them'],
+  ['design/game.md', 1200, "keep it the index (the game in a sentence, pillars, the list of systems); each system's rules go in design/systems/<system>.md"],
+  ['design/systems/*.md', 1500, 'split the system, or move detail its readers rarely need into a page it links'],
+  ['design/art.md', 1500, 'move rarely needed detail into a page it links'],
+  ['design/sound.md', 1500, 'move rarely needed detail into a page it links'],
+  ['ENGINEERING.md', 1500, "keep it the map; each system's code notes go on its design/systems page"],
+];
+const countWords = (text) => (text.replace(/```[\s\S]*?```/g, ' ').match(/\S+/g) || []).length;
+
+export async function readingBudget(id) {
+  const base = path.join(DIRS.games, id);
+  const out = [];
+  for (const [pat, max, how] of PAGE_WORDS) {
+    let files = [path.join(base, pat)];
+    if (pat.endsWith('/*.md')) {
+      const dir = path.join(base, pat.slice(0, -5));
+      files = (await fs.readdir(dir).catch(() => [])).filter((f) => f.endsWith('.md') && f !== 'README.md').map((f) => path.join(dir, f));
+    }
+    for (const f of files) {
+      const text = await fs.readFile(f, 'utf8').catch(() => null);
+      if (text === null) continue;
+      const n = countWords(text);
+      if (n > max) out.push(`WARN ${path.relative(base, f).split(path.sep).join('/')} is ${n.toLocaleString('en')} words (a must-read page stays under ${max.toLocaleString('en')}): ${how}`);
+    }
+  }
   return out;
 }
 

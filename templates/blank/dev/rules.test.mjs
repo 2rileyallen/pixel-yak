@@ -25,7 +25,7 @@ test('every art entry declares its size, anchor and poses, and its anims name on
 
 test('every song and sound effect compiles and renders healthy audio (no NaN, not silent, below full scale)', async () => {
   const { SOUND } = await import('../game/sound.js'); // nothing plays: the engine renders offline
-  const { renderSong, renderSfx, audioStats } = await import('../../../engine/sound/index.js');
+  const { renderSong, renderSfx, audioStats } = await import('../engine/sound/index.js');
   for (const id of Object.keys(SOUND.songs)) {
     const c = SOUND.song(id);
     assert.deepEqual(c.warnings, [], `song ${id}`);

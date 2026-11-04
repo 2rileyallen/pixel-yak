@@ -8,13 +8,17 @@
     "captures": { "captures": "*", "note": "every capture test in dev/tests/" }
   },
   "areas": {
+    "engine/**": ["unit", "studio", "boot"],
     "game/sprites.js": ["unit", "studio", "boot"],
     "game/art/**": ["studio", "boot"],
     "assets.js": ["studio", "boot"],
     "design/**/*.js": ["studio", "boot"],
     "design/**": [],
+    "game/systems/**": ["unit", "boot"],
+    "game/save.js": ["unit", "boot"],
     "game/**": ["unit", "boot"],
     "dev/tests/**": ["captures"],
+    "dev/saves/**": ["unit"],
     "dev/**": ["unit"],
     "game.json": ["unit", "studio", "boot"],
     "requests/**": [],

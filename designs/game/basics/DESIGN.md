@@ -44,7 +44,7 @@ Under all of it: **the user playing and judging is the bottleneck.** Everything 
 
 Declare the size at kickoff, **toy**, **demo** or **big**, because deciding "big" late means a costly retrofit.
 
-**Every size**: a title screen, a pause menu (help, settings, fullscreen), pixel-art UI, saves. **Saves: the game decides** the slots; auto-save is a good default; saves survive reloads; an unreadable save falls back to the one before; a save too old to load is refused with a clear message.
+**Every size**: a title screen, a pause menu (help, settings, fullscreen), pixel-art UI, saves. **Saves: the game decides** the slots; auto-save is a good default; saves survive reloads; an unreadable save falls back to the one before and is never written over (it's kept, and the player is told); an older save is brought forward by migrations, because a player's hours are worth more than a tidy format. Every game is made of **systems**, each owning its part of the state with its own save version (the template's `game/systems/`), because "rework combat" should touch combat, not the whole game.
 
 - **Toy**: a mechanic to feel in an afternoon; one check that it boots.
 - **Demo**: proves the fun over a real stretch of play; rule tests, and screenshots you open.
@@ -53,7 +53,8 @@ Declare the size at kickoff, **toy**, **demo** or **big**, because deciding "big
   - The simulation indexes instead of scanning: nothing per frame loops over everything, caches keyed by a version counter, only what's on view drawn, no assumed map size.
   - A deterministic simulation, so tests and replays are exact.
   - Test fixtures at three sizes, a golden replay (hash the state; a refactor keeps the hash), and time budgets enforced by a test.
-  - Starting any task costs little reading however big the game gets: a one-page `AGENTS.md`, design files that say how the game is now, decisions looked up by number, one changelog.
+  - Old-save fixtures: a stored save of every system version, which the tests must load.
+  - Starting any task costs little reading however big the game gets: a one-page `AGENTS.md`, a short `design/game.md` listing the systems, one page per system, decisions looked up by number, one changelog.
 
 ## Do / Don't
 
@@ -84,6 +85,8 @@ A good ask names **the moment** (F9 while playing sends a screenshot and the gam
 - "Brain dump below, all thoughts: tell me what you'd do, ask, and leave."
 
 ## Changelog
+
+- 2026-11-04 · Saves migrate and are never written over; every game is made of systems with their own save versions and pages (the template's shape).
 
 - 2026-11-02 · Seeded from the house rules of the studio this harness grew out of.
 - 2026-11-02 · Seeded from cross-game design lessons from several games' playtests.

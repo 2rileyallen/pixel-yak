@@ -1,7 +1,7 @@
 // design/palette.js — this game's palette: the code twin of design/art.md. Materials are 5-stop
 // ramps, dark → light; sprites paint material + shade (engine/art/pix.js), never raw colours, so
 // changing a ramp here recolours every sprite (and the user's edits, which store material refs).
-import { hexRgb } from '../../../engine/art/pix.js';
+import { hexRgb } from '../engine/art/pix.js';
 
 export const M = { INK: 1, SKIN: 2, HAIR: 3, CLOTH: 4, METAL: 5, GLOW: 6 };
 export const HEXRAMPS = {

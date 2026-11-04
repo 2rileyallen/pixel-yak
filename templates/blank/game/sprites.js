@@ -2,9 +2,9 @@
 // Game code only calls sprite(id, pose) / drawSprite(...). Add art modules to `entries`; each new
 // entry shows up in Pixel Yak by itself — the font and the UI widgets too, so the user can repaint
 // the letters and the boxes like any sprite.
-import { createArt } from '../../../engine/art/registry.js';
-import { fontArt } from '../../../engine/art/font-art.js';
-import { widgetArt } from '../../../engine/art/widget-art.js';
+import { createArt } from '../engine/art/registry.js';
+import { fontArt } from '../engine/art/font-art.js';
+import { widgetArt } from '../engine/art/widget-art.js';
 import { EDITS } from './art/edits/index.js';
 import { M, HEXRAMPS, GLOW, FIN } from '../design/palette.js';
 import { STARTER_ART } from './art/starter.js';

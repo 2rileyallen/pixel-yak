@@ -15,8 +15,11 @@ const SHELVES = [
   ['art', 'Art', 'How a game looks: palette, shapes, light, motion, UI'],
   ['sound', 'Sound', 'How a game sounds: instruments, tempo, song form, mix'],
   ['game', 'Game', 'How a kind of game plays: loop, pacing, screen, controls'],
+  ['systems', 'Systems', 'Game code a game copies in: a camera, menus, an inventory, dialogue — its own copy from then on'],
 ];
-const WHAT = { art: 'look', sound: 'sound', game: 'game design' };
+const WHAT = { art: 'look', sound: 'sound', game: 'game design', systems: 'system' };
+// Which library entry a game started from on a shelf (systems: a game copies in several).
+const started = (p, shelf, id = null) => (shelf === 'systems' ? ((p.systemsFrom || []).includes(id) ? id : null) : p.designs && p.designs[shelf]);
 
 export class DesignsView {
   constructor(app) {
@@ -36,7 +39,7 @@ export class DesignsView {
 
   list(shelf = this.shelf) { return this.app.designs.filter((d) => d.shelf === shelf); }
   key(d) { return `${d.source}:${d.id}`; }
-  usedBy(d) { return d.source === 'library' || !this.list(d.shelf).some((x) => x.id === d.id && x.source === 'library') ? this.app.projects.filter((p) => p.designs && p.designs[d.shelf] === d.id) : []; }
+  usedBy(d) { return d.source === 'library' || !this.list(d.shelf).some((x) => x.id === d.id && x.source === 'library') ? this.app.projects.filter((p) => started(p, d.shelf, d.id) === d.id) : []; }
   current() {
     const list = this.list();
     return list.find((d) => this.key(d) === this.sel[this.shelf]) || list[0] || null;
@@ -222,21 +225,21 @@ export class DesignsView {
     const gs = this.games();
     if (!gs.length) { toast('No games yet — make one in Games.', { kind: 'warn' }); return; }
     popMenu(anchor, [{ header: `Use ${d.title || d.id} in…` }, ...gs.map((p) => {
-      const has = p.designs && p.designs[d.shelf];
+      const has = started(p, d.shelf, d.id);
       return { label: p.name, ico: 'projects', hint: has ? `has its own (from ${has})` : '', fn: () => this.app.copyPrompt(has ? pullPrompt(p, d) : usePrompt(p, d), has ? 'Pull prompt' : 'Use prompt') };
     })]);
   }
 
   pullMenu(anchor, d) {
-    const gs = this.games().filter((p) => p.designs && p.designs[d.shelf]);
+    const gs = this.games().filter((p) => started(p, d.shelf, d.id));
     if (!gs.length) { toast(`No game has its own ${WHAT[d.shelf]} yet — use "Use in a game…".`, { kind: 'warn' }); return; }
-    popMenu(anchor, [{ header: `Pull from ${d.title || d.id} into…` }, ...gs.map((p) => ({ label: p.name, ico: 'diff', hint: p.designs[d.shelf] === d.id ? 'started here' : `from ${p.designs[d.shelf]}`, fn: () => this.app.copyPrompt(pullPrompt(p, d), 'Pull prompt') }))]);
+    popMenu(anchor, [{ header: `Pull from ${d.title || d.id} into…` }, ...gs.map((p) => ({ label: p.name, ico: 'diff', hint: started(p, d.shelf, d.id) === d.id ? 'started here' : `from ${started(p, d.shelf, d.id)}`, fn: () => this.app.copyPrompt(pullPrompt(p, d), 'Pull prompt') }))]);
   }
 
   promoteMenu(anchor) {
     const gs = this.games();
     if (!gs.length) { toast('No games yet.', { kind: 'warn' }); return; }
-    popMenu(anchor, [{ header: `Promote whose ${WHAT[this.shelf]}?` }, ...gs.map((p) => ({ label: p.name, ico: 'plus', hint: p.designs && p.designs[this.shelf] ? `from ${p.designs[this.shelf]}` : '', fn: () => this.app.copyPrompt(promotePrompt(p, this.shelf), 'Promote prompt') }))]);
+    popMenu(anchor, [{ header: `Promote whose ${WHAT[this.shelf]}?` }, ...gs.map((p) => ({ label: p.name, ico: 'plus', hint: this.shelf !== 'systems' && started(p, this.shelf) ? `from ${started(p, this.shelf)}` : '', fn: () => this.app.copyPrompt(promotePrompt(p, this.shelf), 'Promote prompt') }))]);
   }
 
   gameMenu(anchor, d, p) {
@@ -261,6 +264,12 @@ function pullPrompt(p, d) {
 }
 
 function promotePrompt(p, shelf) {
+  if (shelf === 'systems') {
+    return `One of ${p.name}'s systems is worth reusing in other games: promote it to the design library's systems shelf. ` +
+      `Ask me which system (its file in game/systems/ and its page in design/systems/), suggest an id and a title, and ask whether it goes in the public library (designs/) or stays mine (local/designs/, --local). ` +
+      `Then run \`node cli/yak.mjs design-promote ${p.id} systems <id> --system <its id in the game> [--local] --title "<title>"\`. ` +
+      `Make it general before any other game uses it: whatever it imports from the game (data, other systems) is passed in or included — the command lists those — and its page says how a game wires it in, with no names or story from ${p.name}. Follow skill design.`;
+  }
   return `${p.name}'s ${WHAT[shelf]} is worth keeping: promote it to the design library as a new ${shelf} entry. ` +
     `Suggest an id and a title, and ask me whether it goes in the public library (designs/) or stays mine (local/designs/, --local). ` +
     `Then run \`node cli/yak.mjs design-promote ${p.id} ${shelf} <id> [--local] --title "<title>"\` and rewrite the new DESIGN.md as a general entry: ` +

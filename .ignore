@@ -1,0 +1,4 @@
+# Searches (ripgrep, and the AI tools built on it) skip history: the current truth lives in each
+# game's AGENTS.md, design/ and DECISIONS.md. Read a file under archive/ directly when a question is
+# about the past.
+games/*/archive/

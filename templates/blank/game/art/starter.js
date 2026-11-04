@@ -1,7 +1,7 @@
 // art/starter.js — a placeholder sprite proving the art pipeline (generator → Pixel Yak edits →
 // game). Replace or delete it once the real art arrives. Paints materials + shades from the
 // game's own palette (design/palette.js), never raw colours.
-import { Pix } from '../../../../engine/art/pix.js';
+import { Pix } from '../../engine/art/pix.js';
 import { M, FIN } from '../../design/palette.js';
 
 const first = (...names) => names.map((n) => M[n]).find((v) => v != null) ?? Object.values(M)[1];

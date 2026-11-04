@@ -37,8 +37,7 @@ Everything else in this repo is one of two things:
    page (its **Now** line says where it stands), then `node cli/yak.mjs inbox <id>` for its tickets.
    Read nothing about any other game. **Search inside its folder:** `games/` is ignored by this
    repo's git, so a code search from here (ripgrep, and the search tools built on it) skips every
-   game except the demo and finds only the harness's copies. Always give the search the path
-   `games/<id>/`.
+   game and finds only the harness's copies. Always give the search the path `games/<id>/`.
 3. **No game named yet:** `node cli/yak.mjs games` (one line each) and `node cli/yak.mjs inbox`
    (a count per game, never their tickets), then ask which game, or follow skill new-game.
 4. Then only what the task needs: the game's page says which file to read for which task, a
@@ -57,7 +56,9 @@ particular to it live in its own folder: `AGENTS.md`, `DECISIONS.md`, `design/`,
   from `game/`). A harness engine change reaches a game only when pulled on purpose
   (`node cli/yak.mjs engine <id>`, `engine-pull <id>`, then its full checks). Don't edit a game's
   copy; improve `engine/` here (with its tests and a changelog line) and pull it into the games that
-  want it. `node cli/yak.mjs check <id>` flags any import that leaves the game's folder.
+  want it. A version number is only a label (a change made here and a Pixel Yak update can share
+  one): what a pull may move in art or sound is read from the files it changes, and `engine <id>` says
+  so before you pull. `node cli/yak.mjs check <id>` flags any import that leaves the game's folder.
 
 ## Where things are
 | Folder | What |
@@ -68,7 +69,7 @@ particular to it live in its own folder: `AGENTS.md`, `DECISIONS.md`, `design/`,
 | `studio/` | The desktop app: `main/` (Electron), `data/` (the file layer), `ui/` (the views) |
 | `cli/yak.mjs` | Your way into the studio: requests, art context, lessons, checks, designs, clips |
 | `tools/` | Capture tests, check runner, clip recorder, linter |
-| `templates/blank/` | What every new game is copied from |
+| `templates/` | `blank/`: what every new game is copied from · `demo/`: the demo game, installed into `games/yak-trail/` (`node cli/yak.mjs demo`); work on the installed copy |
 | `docs/` | `STUDIO.md` (the manual), `contracts/` (file formats), `LESSONS.md` (what past games taught) |
 | `local/` | The person's private profile (ignored by git): ideas, requests about Pixel Yak, their own designs, `LESSONS.md` (what their games taught), save backups, brand. Updating Pixel Yak never touches it |
 

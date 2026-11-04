@@ -13,7 +13,7 @@ export const commands = {
     help: 'every game, one line each: stage, size, status, live requests, own repo, engine.\n--full adds its paths and designs',
     async run({ opt }) {
       const ps = await D.listProjects();
-      if (!ps.length) { out('No games yet. Make one: node cli/yak.mjs new-game <id> --name "Name"'); return; }
+      if (!ps.length) { out('No games yet. The demo: node cli/yak.mjs demo · a new one: node cli/yak.mjs new-game <id> --name "Name"'); return; }
       for (const p of ps) {
         const reqs = await D.listRequests(p.id);
         const open = reqs.filter(D.isLiveRequest).length;
@@ -22,6 +22,17 @@ export const commands = {
         out(`- ${p.id} — ${p.name} [${p.status}] · ${st} · ${p.size} · ${plural(open, 'live request')}${p.isRepo ? ' · own repo' : ''} · ${eng.own ? `engine v${eng.version}` : 'shared engine'}`);
         if (opt.full) out(`  game ${p.gamePath}${p.hasGame ? '' : ' (missing)'} · art ${p.assetsPath}${p.hasAssets ? '' : ' (missing)'} · edits ${p.editsDir} · designs ${Object.entries(p.designs).filter(([, v]) => v).map(([k, v]) => `${k}:${v}`).join(' ') || '-'}`);
       }
+    },
+  },
+
+  demo: {
+    usage: 'demo',
+    help: 'put the demo game (Yak Trail) into games/ from templates/demo/, as its own repo. Never\nwrites over a file that is there; the studio does this by itself on a computer with no games',
+    async run() {
+      const r = await D.installDemo();
+      const where = `games/${r.id}/`;
+      if (r.installed) out(`The demo is in ${where}${r.git.repo ? ' (its own repo)' : ''}. Play it from the studio's Games view.`);
+      else out(`The demo is already in ${where}${r.copied ? ` · ${plural(r.copied, 'missing file')} put back` : ''}${r.git.commit ? ' · made its own repo' : ''}.`);
     },
   },
 

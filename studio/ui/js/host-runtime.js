@@ -46,6 +46,8 @@ function normalize(a, i) {
 }
 
 async function load() {
+  // a game's art code runs only on that game's own origin (studio/main/origins.mjs), never the studio's
+  if (!/^host-[a-z0-9][a-z0-9-]{0,47}$/.test(location.host)) { loadError = `host.html runs only on a game's own origin, not ${location.host}`; return; }
   try {
     mod = await import(`/${entry}`);
   } catch (err) {

@@ -21,6 +21,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as D from '../data/index.mjs';
 import { createWatcher } from './watch.mjs';
 import { backupWindow, latestBackup, restoreJs, EMPTY_JS, EVERY_MS, TEST_DIR } from './save-backup.mjs';
+import { originMay, securityHeaders } from './origins.mjs';
 
 const ROOT = D.ROOT;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -74,25 +75,23 @@ function noteHostFile(host, rel) {
   const m = /^host-([a-z0-9][a-z0-9-]{0,47})$/.exec(host);
   if (!m) return;
   const p = rel.replace(/^\/+/, '');
-  if (p === 'studio/ui/host.html') { hostFiles.set(m[1], new Set()); return; } // a fresh host frame
+  if (p === 'studio/ui/host.html') { // a fresh host frame
+    const opened = !hostFiles.has(m[1]);
+    hostFiles.set(m[1], new Set());
+    if (opened) watcher.refocus(); // newly open: its folders are watched in full from now on
+    return;
+  }
   if (p.startsWith('studio/')) return;
   let set = hostFiles.get(m[1]);
   if (!set) hostFiles.set(m[1], (set = new Set()));
   set.add(p);
 }
 
-// What each origin may read. The studio (studio://app) reads the whole folder. A game's frames and
-// windows (studio://host-<id>, play-<id>, sound-<id>) run AI-written code, so they read only their own
-// game, the shared engine (games without their own copy still import it), the studio's frame pages
-// and three.js — never another game, local/ (the person's private profile) or the design library.
-const GAME_ORIGIN = /^(?:host|play|sound)-([a-z0-9][a-z0-9-]{0,47})$/;
-function originMay(host, rel) {
-  if (host === 'app') return true;
-  const m = GAME_ORIGIN.exec(host);
-  if (!m) return false;
-  const p = rel.replace(/^\/+/, '');
-  return p.startsWith(`games/${m[1]}/`) || p.startsWith('engine/') || p.startsWith('studio/ui/') || p.startsWith('node_modules/three/');
-}
+// What each origin may read, and the headers it gets: studio/main/origins.mjs. In short, a game's
+// frames and windows (studio://host-<id>, play-<id>, sound-<id>) run AI-written code, so they read only
+// their own game, the shared engine, the studio's frame pages and three.js; the studio (studio://app)
+// reads everything but runs code only from Pixel Yak and the design library, and its pages can't be
+// framed — so a game's code can never become the studio's code.
 // The real path of a file must not pass through a dot folder either (a link, a short name).
 async function realInside(abs) {
   try {
@@ -102,7 +101,16 @@ async function realInside(abs) {
   } catch { return true; } // not there: the read below answers 404
 }
 
+// Every answer carries the origin's security headers (no type sniffing; studio pages can't be framed).
 async function handleProtocol(req) {
+  const res = await answer(req);
+  let host = '';
+  try { host = new URL(req.url).host; } catch { /* a bad url: answered 400 already */ }
+  for (const [k, v] of Object.entries(securityHeaders(host))) res.headers.set(k, v);
+  return res;
+}
+
+async function answer(req) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return new Response('method not allowed', { status: 405 });
   let rel, url;
   try { url = new URL(req.url); rel = decodeURIComponent(url.pathname); } catch { return new Response('bad url', { status: 400 }); }
@@ -215,6 +223,7 @@ async function launchGame(projectId) {
   lockNavigation(win, origin);
   const entry = { win, console: [] };
   games.set(projectId, entry);
+  watcher.refocus();
   win.webContents.on('console-message', (e) => {
     if (/Electron Security Warning|willReadFrequently/.test(e.message)) return;
     entry.console.push(`[${e.level}] ${e.message}`);
@@ -529,6 +538,8 @@ if (!CAPTURE && !app.requestSingleInstanceLock()) {
       { role: 'editMenu' },
       { label: 'View', submenu: [{ role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }] },
     ]));
+    // a new computer with no games: the demo goes into games/ (templates/demo/), as its own repo
+    await D.installDemo({ onlyIfNoGames: true }).catch((err) => console.error('[studio] demo not installed:', err.message));
     D.cacheProjects(1500); // the calls of one moment share one scan of games/; the watcher resets it on any game change
     await refreshProjectCache();
     registerIpc();

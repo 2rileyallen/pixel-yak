@@ -9,7 +9,8 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { DIRS, ROOT, EDITS, assertId, isId, within, str, nowIso, readJson, writeTextMarked, exists } from './core.mjs';
 import { normalizeProject, getProject, SIZES } from './games.mjs';
-import { readAllEdits } from './edits.mjs';
+import { readAllEdits, rebuildEditsIndex } from './edits.mjs';
+import { rebuildSoundIndex } from './sound.mjs';
 import { createRequest } from './requests.mjs';
 import { copyDesign, findDesign } from './designs.mjs';
 import { copyEngine, engineStatus, outsideImports, harnessEngineVersion } from './engine-copy.mjs';
@@ -63,6 +64,41 @@ function initRepo(dir, name) {
   git('add', '-A');
   const c = git('commit', '-q', '-m', `${name}: made with Pixel Yak`);
   return { repo: true, commit: c.status === 0 };
+}
+
+// The demo game ships in templates/demo/<id>/ and is installed into games/<id>/, where Pixel Yak's
+// git never tracks it: the person's paint, tickets and saves on it are theirs, and an update never
+// collides with them. Installing copies only files that aren't there yet (never over the person's
+// work, e.g. edit files kept from before), rebuilds the edits indexes from whatever edit files are
+// there, and makes the demo its own repo like any game. onlyIfNoGames: the studio's first start on a
+// new computer — a person who has games of their own (or deleted the demo) doesn't get it back.
+export const DEMO_DIR = path.join(DIRS.templates, 'demo');
+export async function installDemo({ onlyIfNoGames = false, git = true } = {}) {
+  const ids = (await fs.readdir(DEMO_DIR, { withFileTypes: true }).catch(() => [])).filter((d) => d.isDirectory() && isId('project', d.name)).map((d) => d.name);
+  if (!ids.length) throw new Error('no demo in templates/demo/');
+  const id = ids[0];
+  const dir = path.join(DIRS.games, id);
+  if (onlyIfNoGames) {
+    const names = await fs.readdir(DIRS.games).catch(() => []);
+    if (names.some((n) => isId('project', n) && exists(path.join(DIRS.games, n, 'game.json')))) return { id, installed: false, why: 'there are games already' };
+  }
+  const src = path.join(DEMO_DIR, id);
+  const had = exists(path.join(dir, 'game.json'));
+  let copied = 0;
+  for (const rel of await listFiles(src)) {
+    const out = within(dir, rel);
+    if (exists(out)) continue;
+    await fs.mkdir(path.dirname(out), { recursive: true });
+    await fs.copyFile(src + path.sep + rel, out);
+    copied++;
+  }
+  // edit files kept from before (an older Pixel Yak tracked the demo in its own repo): draw them again
+  if (copied) {
+    await rebuildEditsIndex(id).catch(() => {});
+    await rebuildSoundIndex(id).catch(() => {});
+  }
+  const repo = git && !exists(path.join(dir, '.git')) ? initRepo(dir, (await readJson(path.join(dir, 'game.json')))?.name || id) : { repo: exists(path.join(dir, '.git')), commit: false };
+  return { id, installed: !had, copied, git: repo };
 }
 
 async function makeGame(opts, id, dir, tdir) {

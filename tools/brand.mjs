@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// tools/brand.mjs — Pixel Yak's pictures, rendered from the yak in games/yak-trail (its art entry,
-// with the user's Pixel Yak edits): the app icon (studio/ui/icon.png + icon.ico; the studio's top bar
+// tools/brand.mjs — Pixel Yak's pictures, rendered from the yak in games/yak-trail (the installed demo,
+// node cli/yak.mjs demo; its art entry, with the user's Pixel Yak edits): the app icon (studio/ui/icon.png + icon.ico; the studio's top bar
 // shows icon.png too) and the README picture (docs/yak.png). Repainted the yak? Run this again.
 //   node tools/brand.mjs
 // The compositions are tools/brand/*.json (the format: tools/render-art.cjs).

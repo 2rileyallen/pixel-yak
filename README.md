@@ -45,8 +45,9 @@ npm start                 # opens the studio
 
 Open your AI in the same folder. It reads `AGENTS.md` first and finds everything from there.
 
-1. **Play the demo.** In the studio's Games view, play **Yak Trail**. Press F9 and tell the AI
-   something about it.
+1. **Play the demo.** In the studio's Games view, play **Yak Trail** (the studio puts it in
+   `games/yak-trail/` the first time it opens; `node cli/yak.mjs demo` does the same). It's yours to
+   paint and change. Press F9 and tell the AI something about it.
 2. **Make a game.** Games → New game: a name, a size, and the design files to start from. Copy the
    kickoff prompt into your AI chat. It asks only what it needs, briefs you on the first playable,
    then builds it.
@@ -54,8 +55,8 @@ Open your AI in the same folder. It reads `AGENTS.md` first and finds everything
    the prompts the studio copies for you.
 
 ## Your games, your repos
-Each game lives in `games/<id>/` and is usually **its own git repo**. Pixel Yak ignores everything in
-`games/` except the demo. To bring a game you already have, clone it there:
+Each game lives in `games/<id>/` and is usually **its own git repo**. Pixel Yak's own git ignores
+everything in `games/`, the demo included. To bring a game you already have, clone it there:
 
 ```
 git clone https://github.com/<you>/<your-game>.git games/<your-game>
@@ -86,6 +87,11 @@ An update never touches `games/` or `local/`. To bring a game onto the new engin
 full checks). If you or your AI changed Pixel Yak's own files, `git pull` merges those changes with
 the new version, and your AI can sort out any conflict.
 
+Updating from a Pixel Yak older than November 2026, when the demo still lived in Pixel Yak's own
+repo: if `git pull` stops on files in `games/yak-trail/`, keep your copy and let go of the tracked one
+(`git rm -r -q --cached games/yak-trail`, commit, `git pull`), then `node cli/yak.mjs demo` makes
+it a game of its own.
+
 ## Inside
 | Folder | What |
 |---|---|
@@ -94,8 +100,7 @@ the new version, and your AI can sort out any conflict.
 | `engine/` | What games import: `art/`, `shell/`, `sound/`, `link/` |
 | `designs/` | The design library: `art/`, `sound/`, `game/` |
 | `.agents/skills/` | How the AI works here: new-game, requests, art, sound, design, explore, polish, optimize, publish, promo, collaborate… (mirrored to `.claude/skills/`) |
-| `templates/blank/` | What every new game starts as |
-| `games/yak-trail/` | The demo game |
+| `templates/` | `blank/`: what every new game starts as · `demo/`: the demo game, installed into `games/yak-trail/` |
 | `docs/` | `STUDIO.md` (the manual), `contracts/` (file formats), `LESSONS.md` (what past games taught) |
 
 ## Principles

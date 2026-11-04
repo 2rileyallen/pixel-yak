@@ -100,6 +100,9 @@ Skills (`.agents/skills/`) say how to use these for each kind of task. `AGENTS.m
   The sweep goes deep only into the games open this session or running; every other game is swept
   shallowly (its folder and requests), and history (`archive/`) and generated output are skipped. If
   the system drops file events under a burst, a sweep runs at once.
+- On Linux, which has no recursive file watching of its own, the studio watches folder by folder:
+  every folder of the games open this session, and only the folder and requests of the others — never
+  `.git`, `node_modules` or history — so 200 games cost a few hundred watches, not a walk of the disk.
 - **Each game loads when you open it.** The studio holds the open game's requests, lessons and
   edits; every other game is a small summary (counts) until you open it.
 - A file that exists but can't be read (a merge conflict, a half-written file) is named in a
@@ -118,6 +121,11 @@ Skills (`.agents/skills/`) say how to use these for each kind of task. `AGENTS.m
   frame pages and three.js — never another game, `local/` or the design library. Permission requests
   from a game (microphone, camera…) are refused; fullscreen and pointer lock are allowed. Opening a
   script file from the studio shows it in its folder instead of running it.
+- **A game's code never becomes the studio's** (`studio/main/origins.mjs`, `tests/origins.test.mjs`):
+  the studio's origin holds the bridge, so none of its pages can be framed (`frame-ancestors 'none'`),
+  and it runs code only from Pixel Yak itself and the design library. A game's files reach it as data
+  (pictures, sound, video, JSON, text), never as a page or a script, and no answer's type is guessed
+  from its bytes.
 - **Bridge:** the studio UI reaches the disk only through `studio/main/preload.cjs`. Every id is
   validated and every path checked to stay inside its folder.
 - **Network:** nothing listens on it. `npm run web` is a separate read-only server on 127.0.0.1 for

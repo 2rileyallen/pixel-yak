@@ -12,11 +12,19 @@
 //   every other game is swept shallowly (its own folder and requests/), so 200 games cost little.
 // - A watcher overflow (Windows drops events under a burst and reports a change with no name) is a
 //   sign events were lost: a sweep runs at once instead of waiting for the next one.
+// - Recursive OS watching is native only on Windows and macOS. Elsewhere (Linux) Node fakes it: it
+//   walks the whole tree on the main thread and opens a watcher on every file and folder — every
+//   game's .git and node_modules too — which grows with every game, freezes the studio while it walks,
+//   and runs out of the system's inotify watches. There the studio watches folder by folder instead:
+//   one plain watcher on each folder its scans keep (the skip list below, and only the folder and
+//   requests/ of a game that isn't open), so the cost follows what's open, not what's on disk.
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 
 export const POLL_EXT = new Set(['.js', '.mjs', '.json', '.jsonl', '.html', '.css', '.md']);
+// Platforms where fs.watch(dir, { recursive: true }) is the OS's own (see the top of this file).
+export const NATIVE_RECURSIVE = process.platform === 'win32' || process.platform === 'darwin';
 
 // Folders never watched or scanned: dot folders, node_modules, history (archive/: old plans, archived
 // requests and design copies), generated output (dev/out, clips/out), lesson cards (pictures) and
@@ -34,13 +42,16 @@ function skipRel(rel) {
 }
 
 // root: repo root · tops: folder names under it · classify(top, relPath) → change | null ·
-// onChange(change) for every real change (scans add viaPoll: true).
-export function createWatcher({ root, tops, classify, onChange, sweepMs = 30000, scopedDelayMs = 500, focus = null, log = console }) {
+// onChange(change) for every real change (scans add viaPoll: true) · perFolder: one plain watcher per
+// scanned folder instead of one recursive watcher per top (the default where recursion isn't native).
+export function createWatcher({ root, tops, classify, onChange, sweepMs = 30000, scopedDelayMs = 500, focus = null, perFolder = !NATIVE_RECURSIVE, log = console }) {
   const START = Date.now();
   const mtimes = new Map(); // abs file → mtimeMs (POLL_EXT files seen by scans and events)
   const dirFiles = new Map(); // abs dir → Set(abs files) seen there by the last scan
   const dirty = new Set(); // dirs the OS watcher mentioned, waiting for a scoped rescan
-  const watchers = new Map();
+  const watchers = new Map(); // top → its recursive watcher
+  const folderWatchers = new Map(); // abs dir → its plain watcher (perFolder)
+  let folderWatchFailed = 0;
   let primed = false, sweeping = null, scanTimer = null, sweepTimer = null, closed = false;
   const stats = { sweeps: 0, lastSweepMs: 0, lastSweepFiles: 0, scopedScans: 0, scopedDirs: 0, lastScopedMs: 0 };
 
@@ -79,6 +90,7 @@ export function createWatcher({ root, tops, classify, onChange, sweepMs = 30000,
     dirty.clear();
     const t0 = performance.now();
     for (const d of dirs) await scanDir(d, 'new', null);
+    syncFolderWatches();
     stats.scopedScans++; stats.scopedDirs += dirs.length; stats.lastScopedMs = performance.now() - t0;
   }
 
@@ -144,6 +156,7 @@ export function createWatcher({ root, tops, classify, onChange, sweepMs = 30000,
         dirFiles.delete(d);
       }
       primed = true;
+      syncFolderWatches();
       stats.sweeps++; stats.lastSweepMs = performance.now() - t0; stats.lastSweepFiles = sweep.files;
     })().finally(() => { sweeping = null; });
     return sweeping;
@@ -154,20 +167,48 @@ export function createWatcher({ root, tops, classify, onChange, sweepMs = 30000,
     if (!closed) sweepTimer = setTimeout(() => fullSweep().catch((err) => log.error('[studio] sweep:', err.message)).finally(() => scheduleSweep()), ms);
   }
 
+  // An OS event: `rel` is the changed path relative to its top folder.
+  function onEvent(top, rel) {
+    if (skipRel(rel)) return;
+    const abs = path.join(root, top, rel);
+    markDirty(path.dirname(abs));
+    const c = classify(top, rel);
+    if (!c) return;
+    if (c.kind === 'projects') { onChange(c); return; }
+    reallyChanged(abs).then((yes) => { if (yes) onChange(c); }, () => {});
+  }
+
+  // perFolder: a plain watcher on every folder the scans keep, none on folders they dropped. A folder
+  // that can't be watched (gone, or the system is out of watches) is left to the sweep, tried again
+  // after the next one.
+  function syncFolderWatches() {
+    if (!perFolder || closed) return;
+    for (const [dir, w] of folderWatchers) if (!dirFiles.has(dir)) { try { w.close(); } catch {} folderWatchers.delete(dir); }
+    let failed = 0;
+    for (const dir of dirFiles.keys()) {
+      if (folderWatchers.has(dir)) continue;
+      const top = tops.find((t) => path.join(root, t) === dir) || topOf(dir);
+      if (!top) continue;
+      try {
+        const w = fs.watch(dir, (evt, name) => {
+          if (!name) { scheduleSweep(300); return; }
+          onEvent(top, path.relative(path.join(root, top), path.join(dir, name.toString())));
+        });
+        w.on('error', () => { try { w.close(); } catch {} if (folderWatchers.get(dir) === w) folderWatchers.delete(dir); });
+        folderWatchers.set(dir, w);
+      } catch { failed++; }
+    }
+    if (failed && !folderWatchFailed) log.error(`[studio] ${failed} folder(s) can't be watched (the system's watch limit?); the sweep still finds their changes`);
+    folderWatchFailed = failed;
+  }
+
   function watchTop(top) {
     const dir = path.join(root, top);
     fs.mkdirSync(dir, { recursive: true });
     try {
       const w = fs.watch(dir, { recursive: true }, (evt, name) => {
         if (!name) { scheduleSweep(300); return; } // an overflow: events were dropped, so look now
-        const rel = name.toString();
-        if (skipRel(rel)) return;
-        const abs = path.join(dir, rel);
-        markDirty(path.dirname(abs));
-        const c = classify(top, rel);
-        if (!c) return;
-        if (c.kind === 'projects') { onChange(c); return; }
-        reallyChanged(abs).then((yes) => { if (yes) onChange(c); }, () => {});
+        onEvent(top, name.toString());
       });
       watchers.set(top, w);
       // Windows can error a recursive watcher (e.g. a folder deleted inside it): restart it and
@@ -186,17 +227,26 @@ export function createWatcher({ root, tops, classify, onChange, sweepMs = 30000,
 
   return {
     async start() {
-      for (const top of tops) watchTop(top);
-      await fullSweep(); // primes the known state; nothing is reported yet
+      for (const top of tops) {
+        if (perFolder) fs.mkdirSync(path.join(root, top), { recursive: true });
+        else watchTop(top);
+      }
+      await fullSweep(); // primes the known state (and, perFolder, opens the folder watchers); nothing is reported yet
       scheduleSweep();
     },
     close() {
       closed = true;
       clearTimeout(scanTimer); clearTimeout(sweepTimer);
       for (const w of watchers.values()) try { w.close(); } catch {}
+      for (const w of folderWatchers.values()) try { w.close(); } catch {}
       watchers.clear();
+      folderWatchers.clear();
     },
     fullSweep,
-    stats: () => ({ ...stats, files: mtimes.size, dirs: dirFiles.size }),
+    // A game came into focus (opened in the studio, or launched): folder by folder, its deeper folders
+    // are watched from the next sweep on, so run one soon.
+    refocus() { if (perFolder && !closed) scheduleSweep(800); },
+    watchedFolders: () => (perFolder ? [...folderWatchers.keys()] : [...watchers.keys()].map((t) => path.join(root, t))),
+    stats: () => ({ ...stats, files: mtimes.size, dirs: dirFiles.size, mode: perFolder ? 'per-folder' : 'recursive', folderWatchers: folderWatchers.size, folderWatchFailed }),
   };
 }

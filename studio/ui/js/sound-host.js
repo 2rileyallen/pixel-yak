@@ -14,6 +14,8 @@ console.warn = (...a) => { const m = a.map(String).join(' '); if (!m.startsWith(
 
 async function load() {
   const module = q.get('module') || '';
+  // a game's sound code runs only on that game's own origin (studio/main/origins.mjs), never the studio's
+  if (!/^sound-[a-z0-9][a-z0-9-]{0,47}$/.test(location.host)) return { ok: false, errors: [`sound-host.html runs only on a game's own origin, not ${location.host}`] };
   if (!/^games\/[a-z0-9][a-z0-9-]{0,47}\/[A-Za-z0-9_./-]+\.m?js$/.test(module) || module.includes('..')) return { ok: false, errors: ['bad module path'] };
   let mod;
   try { mod = await import(`/${module}`); } catch (err) { return { ok: false, errors: [String(err && (err.stack || err.message) || err), ...errors] }; }

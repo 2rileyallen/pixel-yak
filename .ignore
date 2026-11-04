@@ -2,3 +2,6 @@
 # game's AGENTS.md, design/ and DECISIONS.md. Read a file under archive/ directly when a question is
 # about the past.
 games/*/archive/
+# The demo's template: the game you work on is the installed copy in games/yak-trail/. Search the
+# template only by naming it (templates/demo/), when changing what new users get.
+templates/demo/

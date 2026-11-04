@@ -5,7 +5,13 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { D, out, fail, gameArg, plural } from '../lib.mjs';
-import { HARNESS, SKIP_DIRS, CODE, posix, gameEngineDir, harnessEngineVersion, engineStatus, copyEngine, changelogSince, gameImports, outsideImports } from '../../studio/data/engine-copy.mjs';
+import { HARNESS, SKIP_DIRS, CODE, posix, gameEngineDir, harnessEngineVersion, engineStatus, copyEngine, changelogSince, gameImports, outsideImports, movesThings } from '../../studio/data/engine-copy.mjs';
+
+// What a pull of `names` can move, in words (from the files themselves, not the version numbers), or ''.
+function movesWords(names) {
+  const { draws, sounds } = movesThings(names);
+  return [draws.length && `draws art (${draws.join(', ')})`, sounds.length && `makes the sound (${sounds.join(', ')})`].filter(Boolean).join(' and ');
+}
 
 export const section = { title: 'Engine (each game keeps its own copy: games/<id>/engine/)', order: 45 };
 
@@ -38,6 +44,8 @@ export const commands = {
       if (s.local.length) out(`changed in this game's copy (a pull leaves these alone without --force): ${s.local.join(', ')}`);
       if (s.both.length) out(`changed on both sides: ${s.both.join(', ')} — engine-diff ${p.id} <file>, then decide with the person`);
       for (const c of changelogSince(s.version)) out(`\n${c}`);
+      const moves = movesWords(pull);
+      if (moves) out(`\nThe pull brings in code that ${moves}: take \`node cli/yak.mjs sheet ${p.id}\`${movesThings(pull).sounds.length ? ' and render its songs' : ''} BEFORE pulling, to compare after.`);
       if (pull.length) out(`\nBring it in: node cli/yak.mjs engine-pull ${p.id}   (then: node cli/yak.mjs test ${p.id} --full, and look)`);
     },
   },
@@ -73,8 +81,10 @@ export const commands = {
       const v = copyEngine(p.id, names);
       out(`${p.id}: engine v${before} → v${v} · ${plural(names.length, 'file')}: ${names.join(', ')}`);
       if (blocked.length) out(`left alone (changed in the game's copy): ${blocked.join(', ')}`);
-      const notes = changelogSince(before);
-      if (notes.some((n) => /Moves art|Changes sound/.test(n))) out('The changelog says this MOVES ART or CHANGES SOUND: look at `sheet` and the songs, and tell the person.');
+      // decided from the files pulled (a version number can mean two different engines); the changelog adds its markers
+      const marked = changelogSince(before).some((n) => /Moves art|Changes sound/.test(n));
+      const moves = movesWords(names);
+      if (moves || marked) out(`This pull brought in code that ${moves || 'the changelog marks MOVES ART or CHANGES SOUND'}${moves && marked ? ' (and the changelog marks MOVES ART or CHANGES SOUND)' : ''}: look at \`sheet ${p.id}\`${movesThings(names).sounds.length || marked ? ' and the songs' : ''} against before, and tell the person what moved.`);
       out(`Next: node cli/yak.mjs test ${p.id} --full, look at the screenshots, then commit games/${p.id}/engine + game.json in the game's repo ("engine v${v}").`);
     },
   },

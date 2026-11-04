@@ -18,7 +18,8 @@ making a game with it and fixing what got in your way.
 3. Match the code around you: a header comment per file, plain-English comments, small functions,
    no frameworks, no build step, no new dependencies without a good reason in the PR.
 4. Check your work:
-   - `node cli/yak.mjs test yak-trail --full` (the demo game);
+   - `node cli/yak.mjs test yak-trail --full` (the demo game; a change to the demo itself goes in
+     its template, `templates/demo/yak-trail/`, and is checked in an installed copy: `node cli/yak.mjs demo`);
    - the studio headless: `npx electron . --capture=<steps.json> --out=<dir>` (see `docs/STUDIO.md` → Testing);
    - **look at the screenshots** of what you changed.
 5. Open a pull request that says what changed, why, and how to see it.

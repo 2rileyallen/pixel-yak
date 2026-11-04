@@ -88,3 +88,31 @@ test('the generated index modules a game imports never change shape', () => {
     + 'export const SOUND_EDITS = {"songs":{"s":{"k":1}},"sfx":{},"instruments":{}};\n');
   assert.deepEqual(SND.parseEditsIndexSource(SND.editsIndexSource({ songs: { s: { k: 1 } } })), { songs: { s: { k: 1 } }, sfx: {}, instruments: {} });
 });
+
+// A version number can mean two engines (a change made in this Pixel Yak and an update can share one),
+// so whether a pull or the Sound view may move art or change sound is decided from the files.
+test('art- and sound-moving changes are found from the files, not the version number', async () => {
+  const { engineStatus, soundDiffers, movesThings } = await import('../studio/data/engine-copy.mjs');
+  const crypto = await import('node:crypto');
+  const synth = path.join(dir, 'engine', 'sound', 'synth.js');
+  const copyFile = path.join(dir, 'engine', 'COPY.json');
+  const [theirs, record] = await Promise.all([fs.readFile(synth, 'utf8'), fs.readFile(copyFile, 'utf8')]);
+  assert.deepEqual(soundDiffers(ID), [], 'a fresh copy sounds like the studio');
+  try {
+    // the game was copied from an engine labelled with the same number as the harness's, whose synth differs
+    const old = '// an older synth, same version number\n';
+    await fs.writeFile(synth, old);
+    const c = JSON.parse(record);
+    c.files['sound/synth.js'] = crypto.createHash('sha1').update(old).digest('hex').slice(0, 12);
+    await fs.writeFile(copyFile, JSON.stringify(c));
+    const s = engineStatus(ID);
+    assert.equal(String(s.version), String(JSON.parse(await fs.readFile(path.join(D.DIRS.engine, 'version.json'), 'utf8')).version));
+    assert.ok(!s.local.includes('sound/synth.js') && s.fresh.includes('sound/synth.js') && s.differ.includes('sound/synth.js'));
+    assert.match(soundDiffers(ID).join(' '), /sound\/synth\.js differs from Pixel Yak's/);
+    assert.deepEqual(movesThings(s.fresh).sounds, ['sound/synth.js']);
+  } finally {
+    await fs.writeFile(synth, theirs);
+    await fs.writeFile(copyFile, record);
+  }
+  assert.deepEqual(movesThings(['art/pix.js', 'shell/saves.js', 'sound/midi.js', 'link/panel.js', 'shell/font.js']), { draws: ['art/pix.js', 'shell/font.js'], sounds: [] });
+});

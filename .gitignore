@@ -5,9 +5,9 @@ node_modules/
 scratch/
 # your private profile: ideas, requests about Pixel Yak itself, your own design files, brand (a separate private repo, if you like)
 local/
-# games are their own repos, cloned into games/ — except the bundled demo
+# games are their own repos, cloned into games/ — the demo too: it ships in templates/demo/ and is
+# installed into games/ (node cli/yak.mjs demo), so the person's work on it never meets an update
 games/*
-!games/yak-trail/
 # capture-test output (tools/run-captures.mjs) and rendered clips (tools/clip.cjs)
 games/*/dev/out/
 games/*/clips/out/

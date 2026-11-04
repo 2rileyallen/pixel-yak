@@ -15,6 +15,16 @@ export const SKIP_DIRS = new Set(['node_modules', '.git', 'archive', 'refs', 'sc
 export const CODE = /\.(m?js|cjs|ts|html)$/;
 
 export const posix = (p) => p.split(path.sep).join('/');
+
+// Engine files whose code decides what a game draws or how it sounds: a change to one can move art
+// under the person's painted patches, or change a song under their sound edits. Warnings about that
+// are decided from these files, never from version numbers: a change made in this Pixel Yak and a
+// Pixel Yak update can carry the same number, so "v4" alone doesn't say which code a game has.
+export const DRAWS = /^(?:art\/(?:pix|registry|parts|font-art|widget-art|edits)|shell\/(?:runtime|font|widgets|nineslice))\.js$/;
+export const SOUNDS = /^sound\/(?:synth|render|song|player|worklet|notation|index|edits)\.js$/;
+// …of those, the ones the studio's Sound view plays with (it writes each game the edit format the
+// game reads, so edits.js is left out): a difference here means the view may not sound like the game.
+const PLAYS = /^sound\/(?:synth|render|song|player|worklet|notation|index)\.js$/;
 const sha = (file) => crypto.createHash('sha1').update(fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n')).digest('hex').slice(0, 12);
 const readJ = (file) => { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; } };
 
@@ -36,11 +46,12 @@ export function fingerprints(dir) {
 }
 
 // A game's engine: { own, version, harness, local: [changed in the game's copy], fresh: [changed in
-// the harness since the copy], both: [changed on both sides] }
+// the harness since the copy], both: [changed on both sides], differ: [different from the harness's
+// now, for whatever reason] }. Versions are labels; these file lists are what decisions use.
 export function engineStatus(pid) {
   const dir = gameEngineDir(pid);
   const harness = harnessEngineVersion();
-  if (!fs.existsSync(path.join(dir, 'version.json'))) return { own: false, version: null, harness, local: [], fresh: [], both: [] };
+  if (!fs.existsSync(path.join(dir, 'version.json'))) return { own: false, version: null, harness, local: [], fresh: [], both: [], differ: [] };
   const copy = readJ(path.join(dir, COPY)) || { files: {} };
   const was = copy.files || {}, mine = fingerprints(dir), theirs = fingerprints(HARNESS);
   const names = new Set([...Object.keys(was), ...Object.keys(mine), ...Object.keys(theirs)]);
@@ -50,21 +61,30 @@ export function engineStatus(pid) {
     if (theirs[n] !== was[n]) fresh.push(n);
   }
   const both = local.filter((n) => fresh.includes(n) && mine[n] !== theirs[n]);
-  return { own: true, version: (readJ(path.join(dir, 'version.json')) || {}).version ?? null, harness, local: local.sort(), fresh: fresh.sort(), both, copiedFrom: copy.harness || '', copiedAt: copy.copied || '' };
+  const differ = [...names].filter((n) => mine[n] !== theirs[n]).sort();
+  return { own: true, version: (readJ(path.join(dir, 'version.json')) || {}).version ?? null, harness, local: local.sort(), fresh: fresh.sort(), both, differ, copiedFrom: copy.harness || '', copiedAt: copy.copied || '' };
 }
 
 // Why the studio's Sound view (which plays with the harness's engine) may not sound like the game
-// (which plays with its own copy): [] when it should, else reasons in plain words. Reads the
-// changelog's "Changes sound" markers (engine/CHANGELOG.md) and the game's own changes to its copy.
+// (which plays with its own copy): [] when it should, else reasons in plain words. Decided by
+// comparing the files that make the sound; the changelog's "Changes sound" markers
+// (engine/CHANGELOG.md) only add to that when some other sound file differs too.
 export function soundDiffers(pid) {
   const s = engineStatus(pid);
   if (!s.own) return [];
   const out = [];
-  if (Number(s.version) > Number(s.harness)) out.push(`this game's engine (v${s.version}) is newer than Pixel Yak's (v${s.harness})`);
-  else if (changelogSince(s.version).some((n) => /Changes sound/.test(n))) out.push(`Pixel Yak's engine changed how things sound since this game's v${s.version}`);
-  const local = s.local.filter((n) => n.startsWith('sound/'));
+  const plays = s.differ.filter((n) => PLAYS.test(n));
+  const local = plays.filter((n) => s.local.includes(n));
+  const other = plays.filter((n) => !local.includes(n));
+  if (other.length) out.push(`this game's copy of ${other.join(', ')} differs from Pixel Yak's (the game's engine v${s.version}, Pixel Yak's v${s.harness})`);
   if (local.length) out.push(`this game changed its own copy of ${local.join(', ')}`);
+  if (!plays.length && s.differ.some((n) => n.startsWith('sound/')) && changelogSince(s.version).some((n) => /Changes sound/.test(n))) out.push(`Pixel Yak's engine changed how things sound since this game's v${s.version}`);
   return out;
+}
+
+// The pulled files that draw art or make sound: { draws: [...], sounds: [...] }.
+export function movesThings(names) {
+  return { draws: names.filter((n) => DRAWS.test(n)), sounds: names.filter((n) => SOUNDS.test(n)) };
 }
 
 function harnessCommit() {

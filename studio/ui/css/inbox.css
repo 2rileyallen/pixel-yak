@@ -5,6 +5,8 @@
 /* ------------------------------------------------------------ the left pane */
 .inbox .inbox-scope { flex-wrap: wrap; gap: 6px; }
 .inbox .inbox-scope .seg button { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; }
+.inbox .inbox-others { margin: 2px 0 6px; }
+.inbox .inbox-others select { width: 100%; }
 .inbox-filters { display: flex; flex-wrap: wrap; gap: 4px; }
 .fchip { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 12px; cursor: pointer;
   background: transparent; border: 1px solid var(--line2); color: var(--text2); font-size: 12px; transition: background .12s, border-color .12s, color .12s; }

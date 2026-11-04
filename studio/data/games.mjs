@@ -3,7 +3,7 @@
 // self-contained repo that works wherever it is cloned into games/.
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { DIRS, assertId, isId, inside, within, str, nowIso, relRepo, readJson, writeJsonMarked, exists } from './core.mjs';
+import { DIRS, assertId, isId, inside, within, str, nowIso, relRepo, readJson, readJsonStrict, writeJsonMarked, exists, existsAsync, mapPool } from './core.mjs';
 
 // Where a game is in its life. No gates: each game's ROADMAP.md says what "done" feels like.
 export const STAGES = [
@@ -25,7 +25,8 @@ function gamePath(dir, rel, fallback) {
   return p && inside(dir, p) ? p : path.join(dir, fallback);
 }
 
-export function normalizeProject(id, raw) {
+// flags: the file checks, when the caller already did them (async); otherwise checked here (sync).
+export function normalizeProject(id, raw, flags = null) {
   const dir = path.join(DIRS.games, id);
   const p = raw && typeof raw === 'object' ? raw : {};
   const res = p.resolution || {};
@@ -41,8 +42,10 @@ export function normalizeProject(id, raw) {
     genre: str(p.genre, 120),
     size: SIZES.includes(p.size) ? p.size : 'toy',
     // the game's own look: its design/ folder (art.md + palette.js); lessons land there too
-    style: exists(path.join(dir, 'design', 'art.md')) || exists(path.join(dir, 'design', 'palette.js')) ? id : null,
+    style: (flags ? flags.style : exists(path.join(dir, 'design', 'art.md')) || exists(path.join(dir, 'design', 'palette.js'))) ? id : null,
     designs: Object.fromEntries(['art', 'sound', 'game'].map((k) => [k, isId('design', designs[k]) ? designs[k] : null])),
+    // systems it copied in from the library's systems shelf (designs.systems in game.json)
+    systemsFrom: Array.isArray(designs.systems) ? designs.systems.filter((v) => isId('design', v)) : [],
     stage: Number.isInteger(p.stage) && p.stage >= 1 && p.stage < STAGES.length ? p.stage : null,
     status: STATUS.includes(p.status) ? p.status : 'active',
     tags: Array.isArray(p.tags) ? p.tags.filter((t) => typeof t === 'string').slice(0, 30) : [],
@@ -55,22 +58,56 @@ export function normalizeProject(id, raw) {
     editsDir: relRepo(edits),
     createdAt: str(p.createdAt, 40),
     updatedAt: str(p.updatedAt, 40),
-    hasGame: exists(entry),
-    hasAssets: exists(assets),
-    isRepo: exists(path.join(dir, '.git')),
+    hasGame: flags ? flags.hasGame : exists(entry),
+    hasAssets: flags ? flags.hasAssets : exists(assets),
+    isRepo: flags ? flags.isRepo : exists(path.join(dir, '.git')),
   };
 }
 
-export async function listProjects() {
+async function projectFlags(id, raw) {
+  const dir = path.join(DIRS.games, id);
+  const p = raw && typeof raw === 'object' ? raw : {};
+  const [art, palette, hasGame, hasAssets, isRepo] = await Promise.all([
+    path.join(dir, 'design', 'art.md'), path.join(dir, 'design', 'palette.js'),
+    gamePath(dir, p.entry, 'game/index.html'), gamePath(dir, p.assets, 'assets.js'), path.join(dir, '.git'),
+  ].map(existsAsync));
+  return { style: art || palette, hasGame, hasAssets, isRepo };
+}
+
+async function loadProject(id) {
+  const file = path.join(DIRS.games, id, 'game.json');
+  try {
+    const raw = await readJsonStrict(file);
+    if (raw === undefined) return null; // no game.json: not a game
+    return normalizeProject(id, raw, await projectFlags(id, raw));
+  } catch (err) {
+    // the folder is still a game: list it, marked broken, so nothing that has it open is lost
+    return { ...normalizeProject(id, {}, await projectFlags(id, {})), broken: err.why || err.message };
+  }
+}
+
+// Every game. A game whose game.json exists but can't be read is left out (and noted as
+// unreadable) unless broken: true — then it is listed with `broken: "<why>"` (the studio keeps
+// it open and shows the problem). The studio turns on a short memo (cacheProjects) so the calls
+// of one moment share one scan; its watcher and every write call invalidateProjects().
+let projectsMemo = null; // { at, promise }
+let memoMs = 0; // 0 = every call scans (the CLI)
+export function cacheProjects(ms) { memoMs = Math.max(0, Number(ms) || 0); projectsMemo = null; }
+export function invalidateProjects() { projectsMemo = null; }
+export async function listProjects({ broken = false } = {}) {
+  let all;
+  if (memoMs) {
+    if (!projectsMemo || Date.now() - projectsMemo.at > memoMs) projectsMemo = { at: Date.now(), promise: scanProjects() };
+    const memo = projectsMemo;
+    try { all = await memo.promise; } catch (err) { if (projectsMemo === memo) projectsMemo = null; throw err; }
+  } else all = await scanProjects();
+  return broken ? all.slice() : all.filter((p) => !p.broken);
+}
+async function scanProjects() {
   let names = [];
   try { names = await fs.readdir(DIRS.games, { withFileTypes: true }); } catch { return []; }
-  const out = [];
-  for (const d of names) {
-    if (!d.isDirectory() || !isId('project', d.name)) continue;
-    const raw = await readJson(path.join(DIRS.games, d.name, 'game.json'));
-    if (!raw) continue;
-    out.push(normalizeProject(d.name, raw));
-  }
+  const ids = names.filter((d) => d.isDirectory() && isId('project', d.name)).map((d) => d.name);
+  const out = (await mapPool(ids, 16, loadProject)).filter(Boolean);
   return out.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || '') || a.id.localeCompare(b.id));
 }
 
@@ -82,8 +119,8 @@ export async function getProject(id) {
 const EDITABLE = ['name', 'subtitle', 'description', 'genre', 'size', 'stage', 'status', 'tags'];
 export async function updateProject(id, patch) {
   const file = path.join(projectDir(id), 'game.json');
-  const raw = await readJson(file);
-  if (!raw) throw new Error(`game ${id} not found`);
+  const raw = await readJsonStrict(file); // a broken game.json throws: it is never written over
+  if (!raw || typeof raw !== 'object') throw new Error(`game ${id} not found`);
   for (const k of EDITABLE) {
     if (!(k in (patch || {}))) continue;
     const v = patch[k];
@@ -95,5 +132,6 @@ export async function updateProject(id, patch) {
   }
   raw.updatedAt = nowIso();
   await writeJsonMarked(file, raw);
+  invalidateProjects();
   return normalizeProject(id, raw);
 }

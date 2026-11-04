@@ -24,7 +24,7 @@ export const commands = {
     async run({ pos, opt }) {
       const p = await gameArg(pos[0]);
       const id = p.id;
-      const { cfg, source, problems } = C.loadChecks(id);
+      let { cfg, source, problems } = C.loadChecks(id);
       if (problems.length) fail(`${source}: ${problems.join(' · ')}`);
       if (opt.list) return list(id, cfg, source);
       const t0 = Date.now();
@@ -43,16 +43,16 @@ export const commands = {
         const shown = ch.files.length <= 4 ? `: ${ch.files.join(', ')}` : ` (${ch.files.slice(0, 3).join(', ')}, …)`;
         out(`test ${id} --changed · ${plural(ch.files.length, 'file')} changed${shown} [${vs}]`);
         if (sel.unmatched.length) out(`  ${plural(sel.unmatched.length, 'file')} in no area of ${source} (no checks for them): ${sel.unmatched.slice(0, 5).join(', ')}${sel.unmatched.length > 5 ? ', …' : ''}`);
-        names = C.dropCoveredCaptures(cfg, sel.names);
+        names = sel.names;
         if (!names.length) { out('  → no checks guard those files. --full runs everything.'); return; }
         out(`  → ${names.map((n) => `${n} (${sel.reasons[n].join(', ')})`).join(' · ')}`);
       }
-      names = C.dropCoveredCaptures(cfg, names);
+      ({ cfg, names } = C.mergeCaptures(cfg, names));
       if (mode !== 'changed') out(`test ${id} ${mode === 'named' ? names.join(' ') : '--' + mode} · ${source}`);
       if (!names.length) { out(`  the ${mode} set of ${source} is empty — nothing to run.`); return; }
       const width = Math.max(...names.map((n) => n.length));
       const results = await C.runChecks(id, cfg, names, {
-        jobs: Number(opt.jobs) || 4, failFast: !!opt['fail-fast'],
+        jobs: Number(opt.jobs) || C.defaultJobs(), failFast: !!opt['fail-fast'],
         onDone: (r) => {
           if (r.skipped) { out(`SKIP ${r.name.padEnd(width)}  (stopped after the first failure)`); return; }
           out(`${r.ok ? 'PASS' : r.stopped ? 'STOP' : 'FAIL'} ${r.name.padEnd(width)}  ${secs(r.ms).padStart(7)}${r.ok || r.stopped ? '' : `   ${r.label}`}`);

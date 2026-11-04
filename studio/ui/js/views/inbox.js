@@ -46,7 +46,11 @@ export class InboxView {
   constructor(app) {
     this.app = app;
     this.el = h('section.view.split.inbox');
-    this.scope = ['project', 'all', 'studio'].includes(saved.scope) ? saved.scope : 'project';
+    // project = the open game · others = one other game, picked from a list of counts · studio = Pixel Yak's own.
+    // Only the game on screen has its tickets loaded; every other game is a count (data/summary.mjs).
+    this.scope = saved.scope === 'all' ? 'others' : ['project', 'others', 'studio'].includes(saved.scope) ? saved.scope : 'project';
+    this.other = typeof saved.other === 'string' ? saved.other : null;
+    this.otherReqs = null; // the picked other game's live requests
     this.status = FILTERS.some(([v]) => v === saved.status) ? saved.status : 'active';
     this.who = ['all', 'ai', 'user'].includes(saved.who) ? saved.who : 'all';
     this.sel = null;
@@ -56,10 +60,26 @@ export class InboxView {
     mount(this.el, this.left, this.right);
   }
 
-  setProject() { this.sel = null; this.render(); }
-  onShow() { this.render(); }
-  refresh() { this.archived = null; this.render(); }
-  remember() { try { localStorage.setItem('yak.inbox', JSON.stringify({ scope: this.scope, status: this.status, who: this.who })); } catch { /* private mode */ } }
+  setProject() { this.sel = null; this.archived = null; if (this.other === (this.app.project && this.app.project.id)) this.other = null; this.render(); }
+  onShow() { this._dirty = false; this.render(); }
+  // A change elsewhere: redraw now when on screen, otherwise when it's next shown.
+  refresh() {
+    this.archived = null; this.otherReqs = null;
+    if (this.app.view !== 'inbox') { this._dirty = true; return; }
+    this.render();
+  }
+  remember() { try { localStorage.setItem('yak.inbox', JSON.stringify({ scope: this.scope, status: this.status, who: this.who, other: this.other })); } catch { /* private mode */ } }
+
+  // The scope id on screen: the open game, the picked other game, or Pixel Yak's own inbox.
+  scopeId() { return this.scope === 'studio' ? '_studio' : this.scope === 'others' ? this.other : this.app.project && this.app.project.id; }
+
+  async loadOther() {
+    if (this._loadingOther || !this.other) return;
+    this._loadingOther = true;
+    try { this.otherReqs = await window.studio.requests.list(this.other); } catch { this.otherReqs = []; }
+    this._loadingOther = false;
+    this.render();
+  }
 
   wantsArchive() { return this.status === 'done' || this.status === 'all'; }
 
@@ -67,29 +87,37 @@ export class InboxView {
     if (this._loadingArchive) return;
     this._loadingArchive = true;
     try {
-      const all = await window.studio.requests.list('all', { archived: true });
+      const id = this.scopeId();
+      const all = id ? await window.studio.requests.list(id, { archived: true }) : [];
       this.archived = all.filter((r) => r.archived);
     } catch { this.archived = []; }
     this._loadingArchive = false;
     this.render();
   }
 
-  pool() { return this.wantsArchive() && this.archived ? [...this.app.requests, ...this.archived] : this.app.requests; }
+  pool() {
+    const base = this.scope === 'others' ? (this.otherReqs || []) : this.app.requests;
+    return this.wantsArchive() && this.archived ? [...base, ...this.archived] : base;
+  }
 
   // Requests in the chosen scope and "who", before the status filter (the chips count these).
   scoped() {
     const pid = this.app.project && this.app.project.id;
-    if (this.wantsArchive() && !this.archived) this.loadArchive();
+    if (this.scope === 'others' && this.other && !this.otherReqs) this.loadOther();
+    if (this.wantsArchive() && !this.archived && this.scopeId()) this.loadArchive();
+    const want = this.scopeId();
     return this.pool().filter((r) => {
-      if (this.scope === 'project' && r.scope !== pid) return false;
-      if (this.scope === 'studio' && r.scope !== '_studio') return false;
+      if (r.scope !== want) return false;
       if (this.who !== 'all' && r.assignee !== this.who) return false;
       return true;
     });
   }
 
   open(r) {
-    if (r.scope !== (this.app.project && this.app.project.id)) this.scope = r.scope === '_studio' ? 'studio' : 'all';
+    if (r.scope !== (this.app.project && this.app.project.id)) {
+      if (r.scope === '_studio') this.scope = 'studio';
+      else { this.scope = 'others'; if (this.other !== r.scope) { this.other = r.scope; this.otherReqs = null; this.archived = null; } }
+    }
     if (!FILTERS.find(([v]) => v === this.status)[2](r)) this.status = live(r) ? 'active' : 'all';
     this.sel = r.id;
     this.remember();
@@ -116,16 +144,28 @@ export class InboxView {
       h('div.pane-head', null,
         h('h1', null, icon('inbox'), 'Inbox', h('div.grow'), btn('New', () => openRequestDialog(this.app, { onSaved: (r) => { this.sel = r.id; } }), { kind: 'primary', ico: 'plus', small: true })),
         h('p', null, 'The AI briefs you on each request before it changes anything. Say Go, add a note, or Not now.'),
-        h('div.row.inbox-scope', null, seg([['project', pname], ['all', 'All games'], ['studio', 'Pixel Yak']], this.scope, (v) => { this.scope = v; }), h('div.grow'),
+        h('div.row.inbox-scope', null, seg([['project', pname], ['others', 'Other games'], ['studio', 'Pixel Yak']], this.scope, (v) => { this.scope = v; this.archived = null; }), h('div.grow'),
           seg([['all', 'Everyone'], ['ai', 'AI'], ['user', 'You']], this.who, (v) => { this.who = v; })),
         chips,
         this.scope === 'project' && (toBrief || ready) ? h('div.row.inbox-prompts', null,
           toBrief ? btn(`Brief me on ${toBrief} open`, () => this.app.copyPrompt(inboxPrompt(this.app.project, toBrief)), { kind: 'teal', ico: 'send', small: true, title: 'Copies a prompt for your AI chat: it reads each open request and briefs you before changing anything' }) : null,
           ready ? btn(`Work ${ready} approved`, () => this.app.copyPrompt(approvedPrompt(this.app.project, ready)), { kind: 'teal', ico: 'play', small: true, title: 'Copies a prompt for your AI chat: it works the requests you said Go to' }) : null) : null),
-      h('div.pane-scroll', null, items.length ? items.map((r) => this.card(r))
-        : h('div.empty', null, icon('inbox'), h('h3', null, 'Nothing here'), h('p', null, EMPTY[this.status]))));
+      this.scope === 'others' ? this.othersPicker(pid) : null,
+      h('div.pane-scroll', null, this.scope === 'others' && !this.other ? h('div.empty', null, icon('inbox'), h('h3', null, 'Pick a game'), h('p', null, 'Each game’s tickets load when you pick it — the list above shows what waits in each.'))
+        : items.length ? items.map((r) => this.card(r))
+        : h('div.empty', null, icon('inbox'), h('h3', null, this.scope === 'others' && !this.otherReqs ? 'Loading…' : 'Nothing here'), h('p', null, EMPTY[this.status]))));
     const cur = this.pool().find((r) => r.id === this.sel);
     mount(this.right, cur ? this.detail(cur) : this.placeholder());
+  }
+
+  // The other games, as counts: what waits in each, the ones waiting on you first. Picking one loads it.
+  othersPicker(pid) {
+    const games = this.app.summary.games || {};
+    const rows = this.app.projects.filter((p) => p.id !== pid).map((p) => ({ p, c: (games[p.id] && games[p.id].requests) || {} }))
+      .sort((a, b) => (b.c.forYou || 0) - (a.c.forYou || 0) || (b.c.live || 0) - (a.c.live || 0) || a.p.name.localeCompare(b.p.name));
+    if (!rows.length) return h('p.dim', null, 'No other games yet.');
+    const label = ({ p, c }) => `${p.name}${c.live ? ` · ${c.live}` : ''}${c.forYou ? ` · ${c.forYou} for you` : ''}`;
+    return h('div.row.inbox-others', null, select([['', 'Pick a game…'], ...rows.map((r) => [r.p.id, label(r)])], this.other || '', (v) => { this.other = v || null; this.otherReqs = null; this.archived = null; this.sel = null; this.remember(); this.render(); }, { 'aria-label': 'Which game' }));
   }
 
   statusTag(r) {
@@ -176,6 +216,7 @@ export class InboxView {
     try {
       await window.studio.requests.update(r.scope, r.id, patch);
       await this.app.reloadRequests(r.scope); this.archived = null;
+      if (this.scope === 'others' && r.scope === this.other) this.otherReqs = null; // reload the shown game's tickets
       this.render();
       if (msg) toast(msg.text, { kind: 'ok', timeout: msg.timeout || 4200, action: msg.action || null });
       return true;
@@ -186,7 +227,7 @@ export class InboxView {
     const proj = this.app.projects.find((p) => p.id === r.scope);
     return this.update(r, { status: 'approved', note: 'go' }, {
       text: 'Go — the AI can start on it.', timeout: 6000,
-      action: proj ? { label: 'Copy prompt', fn: () => this.app.copyPrompt(approvedPrompt(proj, this.app.requests.filter((x) => x.scope === proj.id && x.assignee === 'ai' && x.status === 'approved').length || 1)) } : null,
+      action: proj ? { label: 'Copy prompt', fn: () => this.app.copyPrompt(approvedPrompt(proj, this.pool().filter((x) => x.scope === proj.id && x.assignee === 'ai' && x.status === 'approved').length || 1)) } : null,
     });
   }
 

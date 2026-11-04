@@ -151,6 +151,24 @@ export function dropCoveredCaptures(cfg, names) {
   return names.some(all) ? names.filter((n) => all(n) || !('captures' in cfg.checks[n])) : names;
 }
 
+// Several selected checks that each run some capture tests become ONE run of their union, so no
+// capture test runs twice at once (two runs writing the same dev/out/<test>/ corrupt each other's
+// result). → { cfg, names } with the merged check named after the ones it replaces.
+export function mergeCaptures(cfg, names) {
+  names = dropCoveredCaptures(cfg, names);
+  const caps = names.filter((n) => 'captures' in cfg.checks[n]);
+  if (caps.length < 2) return { cfg, names };
+  const want = new Set();
+  for (const n of caps) { const c = cfg.checks[n].captures; (Array.isArray(c) ? c : [c]).forEach((x) => want.add(String(x))); }
+  const merged = caps.length <= 3 ? caps.join('+') : `${caps[0]}+${caps.length - 1} more`;
+  const timeout = Math.max(...caps.map((n) => Number(cfg.checks[n].timeout) || 600));
+  const checks = { ...cfg.checks, [merged]: { captures: [...want], timeout, note: `the capture tests of ${caps.join(', ')}, run once` } };
+  const at = names.indexOf(caps[0]);
+  const rest = names.filter((n) => !caps.includes(n));
+  rest.splice(Math.min(at, rest.length), 0, merged);
+  return { cfg: { ...cfg, checks }, names: rest };
+}
+
 export const defaultJobs = () => Math.max(1, Math.min(4, Math.floor(os.cpus().length / 2)));
 
 // How a check runs: { cmd, args, shell, label } — always from the harness root.

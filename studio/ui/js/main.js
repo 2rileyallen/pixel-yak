@@ -40,7 +40,8 @@ class App {
     this.host = null;
     this.styles = [];
     this.designs = [];
-    this.requests = [];
+    this.requests = []; // the open game's live requests + Pixel Yak's own (local/inbox) — never every game's
+    this.summary = { games: {}, studio: null, engine: null }; // every game as counts (data/summary.mjs)
     this.running = new Set();
     this.view = null;
     this.lastChange = null;
@@ -165,7 +166,8 @@ class App {
     this.projects = await api.projects.list();
     if (this.project) {
       const cur = this.projects.find((p) => p.id === this.project.id);
-      if (cur) { this.project = cur; this.renderProjectBtn(); }
+      // a broken game.json keeps what was known about the game (its name, paths) and just marks it broken
+      if (cur) { this.project = cur.broken ? { ...this.project, broken: cur.broken } : cur; this.renderProjectBtn(); }
     }
     return this.projects.filter((p) => prev.size && !prev.has(p.id));
   }
@@ -191,6 +193,7 @@ class App {
     this.renderPlay();
     this.host = new ProjectHost(p);
     this.host.start().catch(() => {});
+    await Promise.all([this.reloadRequests(), this.reloadStyles()]); // this game's tickets and lessons; the last game's are let go
     this.updateCounts();
     await Promise.all([
       this.views.art.setProject(p, this.host),
@@ -205,18 +208,31 @@ class App {
   styleOf(p) { return p && p.style ? this.styles.find((s) => s.id === p.style) || null : null; }
 
   async reloadDesigns() { this.designs = await api.designs.list().catch(() => []); }
-  async reloadStyles() { this.styles = await api.styles.list().catch(() => []); }
+  // Only the open game's look and lesson counts (reading every game's lesson log at startup costs
+  // seconds once there are many games; the badge and the Lessons view only ever show the open one).
+  async reloadStyles() {
+    const p = this.project;
+    this.styles = p && p.style ? [await api.styles.summary(p.style).catch(() => null)].filter(Boolean) : [];
+  }
 
   // ============================================================== requests ===
+  // Loads only the open game's requests (and Pixel Yak's own); other games stay counts in this.summary.
   async reloadRequests(scope = null) {
-    if (!scope) this.requests = await api.requests.list('all').catch(() => []);
-    else {
-      const fresh = await api.requests.list(scope).catch(() => null);
-      if (fresh) this.requests = [...this.requests.filter((r) => r.scope !== scope), ...fresh].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const pid = this.project && this.project.id;
+    if (!scope || scope === pid || scope === '_studio') {
+      const keep = (s) => this.requests.filter((r) => r.scope === s);
+      const [mine, own] = await Promise.all([pid ? api.requests.list(pid).catch(() => null) : [], api.requests.list('_studio').catch(() => null)]);
+      this.requests = [...(mine || (pid ? keep(pid) : [])), ...(own || keep('_studio'))].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      this.indexRequests();
     }
-    this.indexRequests();
+    await this.reloadSummary();
     this.updateCounts();
   }
+
+  async reloadSummary() { this.summary = await api.projects.summary().catch(() => this.summary); }
+
+  // A view redraws on a background change only when it's on screen; otherwise it redraws on show.
+  renderIfShown(name) { if (this.view === name) this.views[name].render(); }
 
   // Requests by scope and by target asset, rebuilt once per change (the asset list asks per asset).
   indexRequests() {
@@ -255,7 +271,7 @@ class App {
     const pid = this.project && this.project.id;
     const openHere = this.requests.filter((r) => r.scope === pid && !['done', 'wontfix', 'parked'].includes(r.status)).length;
     // waiting on you: the AI's questions/reminders for you, and briefs that need your Go / note / Not now
-    const forYou = this.requests.filter((r) => (r.assignee === 'user' && !['done', 'wontfix', 'parked'].includes(r.status)) || (r.assignee === 'ai' && r.status === 'planned')).length;
+    const forYou = Object.values(this.summary.games || {}).reduce((n, g) => n + ((g.requests && g.requests.forYou) || 0), 0) + ((this.summary.studio && this.summary.studio.forYou) || 0);
     setBadge(this.navBtns.inbox, forYou || openHere, forYou ? '' : 'teal', forYou ? `${forYou} waiting on you (briefs to answer, questions)` : `${openHere} open for the AI`);
     const st = this.styleOf(this.project);
     setBadge(this.navBtns.lessons, st ? st.undistilled : 0, 'orchid', st ? `${st.undistilled} edits the AI hasn't learned from yet` : '');
@@ -324,13 +340,18 @@ class App {
     if (kinds.has('projects')) {
       const added = await this.reloadProjects();
       for (const p of added) toast(`New game: ${p.name}`, { kind: 'live', action: { label: 'Open', fn: () => this.setProject(p.id) } });
-      if (this.project && !this.projects.some((p) => p.id === this.project.id)) {
-        toast(`${this.project.name} was removed from games/.`, { kind: 'warn' });
+      const cur = this.project && this.projects.find((p) => p.id === this.project.id);
+      // a game.json that can't be read (a merge, a half-written file): the game stays open, nothing is dropped
+      if (cur && cur.broken && cur.broken !== this._brokenShown) toast(`games/${cur.id}/game.json can't be read: ${cur.broken}. ${cur.name || cur.id} stays open and your work is kept — fix the file.`, { kind: 'warn', timeout: 15000 });
+      this._brokenShown = cur ? cur.broken : null;
+      if (this.project && !cur) {
+        const lost = this.views.art.dirtySessions().length || this.views.sound.dirty();
+        toast(`${this.project.name}'s folder was removed from games/.${lost ? ' Its unsaved edits had nowhere to go.' : ''}`, { kind: 'warn', timeout: lost ? 15000 : 6000 });
         this.project = null; this.host = null;
         const next = this.projects.find((p) => p.status === 'active');
         if (next) await this.setProject(next.id);
       }
-      this.views.projects.render();
+      this.renderIfShown('projects');
       this.renderPlay();
     }
     const reqScopes = [...new Set(changes.filter((c) => c.kind === 'requests').map((c) => c.project))];
@@ -342,7 +363,7 @@ class App {
     if (kinds.has('designs') || kinds.has('projects')) this.views.designs.refresh();
     await this.views.art.onFsChange(changes);
     await this.views.sound.onFsChange(changes);
-    if (kinds.has('code') || kinds.has('edits')) this.views.projects.render();
+    if (kinds.has('edits') || kinds.has('code')) { await this.reloadSummary(); this.renderIfShown('projects'); }
   }
 
   renderLive(flash = false) {

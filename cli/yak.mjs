@@ -58,9 +58,18 @@ async function main() {
   if (!args.cmd || ['help', '--help', '-h'].includes(args.cmd)) { out(help(groups)); return; }
   for (const g of groups) {
     const c = g.commands[args.cmd];
-    if (c) { await c.run(args); return; }
+    if (c) { await c.run(args); await warnUnreadable(); return; }
   }
   fail(`unknown command "${args.cmd}" — run without arguments for help`);
 }
 
-main().catch((err) => fail(err.message));
+// Files that exist but couldn't be read (a merge conflict, a half-written file) are said out loud:
+// a listing that silently leaves one out looks exactly like that ticket or game not existing.
+async function warnUnreadable() {
+  const { D } = await import('./lib.mjs');
+  const bad = typeof D.takeUnreadable === 'function' ? D.takeUnreadable() : [];
+  for (const b of bad.slice(0, 20)) process.stderr.write(`warning: ${b.path} can't be read (${b.error}) — left out above. Fix the file; never delete the person's edits\n`);
+  if (bad.length > 20) process.stderr.write(`warning: … and ${bad.length - 20} more unreadable files\n`);
+}
+
+main().catch(async (err) => { await warnUnreadable(); fail(err.message); });

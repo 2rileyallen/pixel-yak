@@ -4,7 +4,7 @@
 //   games/<id>/design/lessons/tuning.jsonl one lesson line per Keep (what the AI learns from)
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { within, str, nowIso, relRepo, readJson, markWrite, writeJsonMarked, exists } from './core.mjs';
+import { within, str, nowIso, relRepo, readJson, markWrite, writeJsonMarked, exists, appendLine } from './core.mjs';
 import { projectDir } from './games.mjs';
 
 export const TUNING_FORMAT = 'pixel-yak-tuning@1';
@@ -74,7 +74,7 @@ export async function keepTuning(gameId, choice) {
   const log = lessonsFile(gameId);
   await fs.mkdir(path.dirname(log), { recursive: true });
   markWrite(log);
-  await fs.appendFile(log, JSON.stringify(lesson) + '\n', 'utf8');
+  await appendLine(log, JSON.stringify(lesson)); // a line cut short by a crash costs only itself
   return { file: relRepo(file), record: rec, lesson };
 }
 

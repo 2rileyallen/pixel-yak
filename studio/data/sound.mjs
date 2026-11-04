@@ -8,7 +8,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { ROOT, assertId, isId, inside, within, str, nowIso, readJson, relRepo, markWrite, writeJsonMarked, writeTextMarked, exists } from './core.mjs';
+import { ROOT, assertId, isId, inside, within, str, nowIso, readJson, relRepo, markWrite, writeJsonMarked, writeTextMarked, exists, appendLine, readJsonStrict } from './core.mjs';
 import { projectDir } from './games.mjs';
 import { readLines } from './lessons.mjs';
 
@@ -45,8 +45,8 @@ export async function readSoundEdits(projectId) {
   for (const f of names.sort()) {
     const m = /^(song|sfx)\.([A-Za-z0-9_.-]{1,96})\.json$/.exec(f);
     if (!m && f !== 'instruments.json') continue;
-    const ed = await readJson(path.join(editsDir, f), { unreadable: true });
-    const errs = ed && ed.unreadable ? ['not valid JSON'] : SOUND.checkSoundEdit(ed);
+    let ed, errs;
+    try { ed = await readJsonStrict(path.join(editsDir, f)); errs = SOUND.checkSoundEdit(ed); } catch (err) { errs = [err.why || err.message]; }
     if (errs.length) { out.invalid.push({ file: `${relRepo(editsDir)}/${f}`, errors: errs }); continue; }
     if (f === 'instruments.json') out.instruments = ed;
     else out[m[1] === 'song' ? 'songs' : 'sfx'][m[2]] = ed;
@@ -54,9 +54,19 @@ export async function readSoundEdits(projectId) {
   return out;
 }
 
+// A broken sound edit file (unreadable, or not a valid edit) stops every write: rebuilding the index
+// would quietly drop it from the game, and a save could go over it. The person's file is fixed, never deleted.
+async function refuseIfBroken(projectId, what) {
+  const all = await readSoundEdits(projectId);
+  if (!all.invalid.length) return all;
+  const err = new Error(`${what} refused: ${all.invalid.map((b) => `${b.file} (${b.errors.join('; ')})`).join('; ')}. Those are the person's sound edits: fix the file (resolve the conflict), never delete it — then save again.`);
+  err.unreadable = true;
+  throw err;
+}
+
 export async function rebuildSoundIndex(projectId) {
   const { editsDir } = await soundInfo(projectId);
-  const all = await readSoundEdits(projectId);
+  const all = await refuseIfBroken(projectId, 'Updating the sound edits index');
   await writeTextMarked(path.join(editsDir, 'index.js'), SOUND.editsIndexSource({ songs: all.songs, sfx: all.sfx, instruments: all.instruments || {} }));
   return Object.keys(all.songs).length + Object.keys(all.sfx).length + (all.instruments ? 1 : 0);
 }
@@ -73,6 +83,7 @@ export async function writeSoundEdit(projectId, ed) {
   if (JSON.stringify(ed).length > 4_000_000) throw new Error('sound edit too large');
   const { editsDir } = await soundInfo(projectId);
   const file = within(editsDir, fileFor(ed.kind, id));
+  await refuseIfBroken(projectId, 'Saving');
   if (SOUND.isEmptyEdit(ed) && !(ed.notes || []).length) {
     markWrite(file);
     await fs.rm(file, { force: true });
@@ -90,6 +101,7 @@ export async function deleteSoundEdit(projectId, kind, id = null) {
   const { editsDir } = await soundInfo(projectId);
   if (!['song', 'sfx', 'instruments'].includes(kind)) throw new Error('kind must be song, sfx or instruments');
   const file = within(editsDir, fileFor(kind, id));
+  await refuseIfBroken(projectId, 'Reverting');
   markWrite(file);
   await fs.rm(file, { force: true });
   await rebuildSoundIndex(projectId);
@@ -107,7 +119,7 @@ export async function appendSoundLesson(projectId, lesson) {
   const file = path.join(lessonsDir(projectId), 'sound.jsonl');
   await fs.mkdir(path.dirname(file), { recursive: true });
   markWrite(file);
-  await fs.appendFile(file, line + '\n', 'utf8');
+  await appendLine(file, line); // a line cut short by a crash costs only itself
   return id;
 }
 
@@ -144,7 +156,7 @@ export async function addSoundDistilled(projectId, { through, summary, version =
   const file = path.join(lessonsDir(projectId), 'sound-distilled.jsonl');
   await fs.mkdir(path.dirname(file), { recursive: true });
   markWrite(file);
-  await fs.appendFile(file, JSON.stringify(entry) + '\n', 'utf8');
+  await appendLine(file, JSON.stringify(entry));
   return entry;
 }
 

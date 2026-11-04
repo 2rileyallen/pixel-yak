@@ -8,15 +8,23 @@
 //   sibling change the watcher coalesced or dropped is still caught — without scanning the repo.
 // - Slow full sweep (default every 30 s, async, one folder at a time) as the last safety net, e.g.
 //   for a watcher that died. It never blocks the main thread for long: every folder read yields.
+//   With `focus()` (the games open in the studio or running), only those games are swept in full;
+//   every other game is swept shallowly (its own folder and requests/), so 200 games cost little.
+// - A watcher overflow (Windows drops events under a burst and reports a change with no name) is a
+//   sign events were lost: a sweep runs at once instead of waiting for the next one.
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 
 export const POLL_EXT = new Set(['.js', '.mjs', '.json', '.jsonl', '.html', '.css', '.md']);
 
-// Folders never watched or scanned: dot folders, node_modules, vendored lib/, dev/out captures.
+// Folders never watched or scanned: dot folders, node_modules, history (archive/: old plans, archived
+// requests and design copies), generated output (dev/out, clips/out) and lesson cards (pictures).
+const OUT_PARENTS = new Set(['dev', 'clips']);
 function skipEntry(name, parentDir) {
-  return name.startsWith('.') || name === 'node_modules' || name === 'lib' || (name === 'out' && path.basename(parentDir) === 'dev');
+  const parent = path.basename(parentDir);
+  return name.startsWith('.') || name === 'node_modules' || name === 'archive'
+    || (name === 'out' && OUT_PARENTS.has(parent)) || (name === 'cards' && parent === 'lessons');
 }
 function skipRel(rel) {
   const parts = rel.split(/[\\/]/).filter(Boolean);
@@ -25,7 +33,7 @@ function skipRel(rel) {
 
 // root: repo root · tops: folder names under it · classify(top, relPath) → change | null ·
 // onChange(change) for every real change (scans add viaPoll: true).
-export function createWatcher({ root, tops, classify, onChange, sweepMs = 30000, scopedDelayMs = 500, log = console }) {
+export function createWatcher({ root, tops, classify, onChange, sweepMs = 30000, scopedDelayMs = 500, focus = null, log = console }) {
   const START = Date.now();
   const mtimes = new Map(); // abs file → mtimeMs (POLL_EXT files seen by scans and events)
   const dirFiles = new Map(); // abs dir → Set(abs files) seen there by the last scan
@@ -74,6 +82,13 @@ export function createWatcher({ root, tops, classify, onChange, sweepMs = 30000,
 
   // mode 'all' recurses into every subfolder (full sweep); 'new' only into folders never seen
   // before (a folder created since the last scan). sweep: { dirs: Set, files: n } for full sweeps.
+  // A game folder that isn't in focus: its own files (game.json…) and its requests, nothing deeper.
+  async function scanShallow(gameDir, sweep) {
+    await scanDir(gameDir, 'flat', sweep);
+    await scanDir(path.join(gameDir, 'requests'), 'flat', sweep);
+    sweep.skipped.push(gameDir + path.sep);
+  }
+
   async function scanDir(dir, mode, sweep) {
     let entries = null;
     try { entries = await fsp.readdir(dir, { withFileTypes: true }); } catch { /* gone */ }
@@ -107,17 +122,22 @@ export function createWatcher({ root, tops, classify, onChange, sweepMs = 30000,
     if (before && primed) for (const f of before) if (!now.has(f)) { mtimes.delete(f); report(f); }
     dirFiles.set(dir, now);
     if (sweep) sweep.files += now.size;
-    for (const s of subdirs) if (mode === 'all' || !dirFiles.has(s)) await scanDir(s, mode, sweep);
+    if (mode === 'flat') return;
+    const games = sweep && focus && dir === path.join(root, 'games') ? focus() : null;
+    for (const s of subdirs) {
+      if (games && !games.has(path.basename(s))) { await scanShallow(s, sweep); continue; }
+      if (mode === 'all' || !dirFiles.has(s)) await scanDir(s, mode, sweep);
+    }
   }
 
   function fullSweep() {
     if (sweeping) return sweeping;
     sweeping = (async () => {
       const t0 = performance.now();
-      const sweep = { dirs: new Set(), files: 0 };
+      const sweep = { dirs: new Set(), files: 0, skipped: [] };
       for (const top of tops) await scanDir(path.join(root, top), 'all', sweep);
       for (const [d, files] of [...dirFiles]) {
-        if (sweep.dirs.has(d)) continue;
+        if (sweep.dirs.has(d) || sweep.skipped.some((p) => d.startsWith(p))) continue; // not swept this time ≠ gone
         for (const f of files) { mtimes.delete(f); if (primed) report(f); }
         dirFiles.delete(d);
       }
@@ -137,7 +157,7 @@ export function createWatcher({ root, tops, classify, onChange, sweepMs = 30000,
     fs.mkdirSync(dir, { recursive: true });
     try {
       const w = fs.watch(dir, { recursive: true }, (evt, name) => {
-        if (!name) return;
+        if (!name) { scheduleSweep(300); return; } // an overflow: events were dropped, so look now
         const rel = name.toString();
         if (skipRel(rel)) return;
         const abs = path.join(dir, rel);

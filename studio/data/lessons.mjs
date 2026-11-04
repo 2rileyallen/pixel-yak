@@ -4,7 +4,7 @@
 // (distilled.jsonl; skill art-learn). The studio calls a game's look a "style": its id is the game id.
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { assertId, isId, within, str, nowIso, readJson, markWrite, exists } from './core.mjs';
+import { assertId, isId, within, str, nowIso, readJson, markWrite, exists, appendLine } from './core.mjs';
 import { projectDir, listProjects } from './games.mjs';
 
 export const styleDir = (id) => path.join(projectDir(assertId('style', id)), 'design');
@@ -128,7 +128,7 @@ export async function appendLesson(styleId, lesson, cardDataUrl = null) {
   const log = path.join(dir, 'lessons', 'log.jsonl');
   await fs.mkdir(path.dirname(log), { recursive: true });
   markWrite(log);
-  await fs.appendFile(log, line + '\n', 'utf8');
+  await appendLine(log, line); // a line cut short by a crash costs only itself
   return id;
 }
 
@@ -146,6 +146,6 @@ export async function addDistilled(styleId, { version, through, summary, by = 'a
   const file = path.join(dir, 'lessons', 'distilled.jsonl');
   await fs.mkdir(path.dirname(file), { recursive: true });
   markWrite(file);
-  await fs.appendFile(file, JSON.stringify(entry) + '\n', 'utf8');
+  await appendLine(file, JSON.stringify(entry));
   return entry;
 }

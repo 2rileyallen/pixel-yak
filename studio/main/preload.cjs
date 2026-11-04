@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('studio', {
   info: () => call('app:info'),
   projects: {
     list: () => call('projects:list'),
+    summary: () => call('projects:summary'),
     update: (id, patch) => call('projects:update', id, patch),
     create: (opts) => call('projects:create', opts),
     check: (id) => call('projects:check', id),
@@ -45,6 +46,7 @@ contextBridge.exposeInMainWorld('studio', {
   },
   styles: {
     list: () => call('styles:list'),
+    summary: (id) => call('styles:summary', id),
     read: (id) => call('styles:read', id),
   },
   lessons: {

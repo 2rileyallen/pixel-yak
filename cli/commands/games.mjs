@@ -3,22 +3,24 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import { D, out, fail, runTool, gameArg, plural } from '../lib.mjs';
+import { engineStatus } from '../../studio/data/engine-copy.mjs';
 
 export const section = { title: 'Games & ideas', order: 40 };
 
 export const commands = {
   games: {
-    usage: 'games',
-    help: 'every game: stage, size, status, open requests, whether it is its own repo',
-    async run() {
+    usage: 'games [--full]',
+    help: 'every game, one line each: stage, size, status, live requests, own repo, engine.\n--full adds its paths and designs',
+    async run({ opt }) {
       const ps = await D.listProjects();
       if (!ps.length) { out('No games yet. Make one: node cli/yak.mjs new-game <id> --name "Name"'); return; }
       for (const p of ps) {
         const reqs = await D.listRequests(p.id);
         const open = reqs.filter(D.isLiveRequest).length;
         const st = p.stage ? D.STAGES[p.stage].name : 'stage ?';
-        out(`- ${p.id} — ${p.name} [${p.status}] · ${st} · ${p.size} · ${plural(open, 'open request')}${p.isRepo ? ' · own git repo' : ''}`);
-        out(`  game ${p.gamePath}${p.hasGame ? '' : ' (missing)'} · art ${p.assetsPath}${p.hasAssets ? '' : ' (missing)'} · edits ${p.editsDir} · designs ${Object.entries(p.designs).filter(([, v]) => v).map(([k, v]) => `${k}:${v}`).join(' ') || '-'}`);
+        const eng = engineStatus(p.id);
+        out(`- ${p.id} — ${p.name} [${p.status}] · ${st} · ${p.size} · ${plural(open, 'live request')}${p.isRepo ? ' · own repo' : ''} · ${eng.own ? `engine v${eng.version}` : 'shared engine'}`);
+        if (opt.full) out(`  game ${p.gamePath}${p.hasGame ? '' : ' (missing)'} · art ${p.assetsPath}${p.hasAssets ? '' : ' (missing)'} · edits ${p.editsDir} · designs ${Object.entries(p.designs).filter(([, v]) => v).map(([k, v]) => `${k}:${v}`).join(' ') || '-'}`);
       }
     },
   },

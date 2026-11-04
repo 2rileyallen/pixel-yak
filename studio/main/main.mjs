@@ -12,7 +12,7 @@
 // - `electron . --capture=<steps.json> --out=<dir>` drives the studio headless and saves
 //   screenshots (the look-at-your-work loop for the studio itself, see docs/STUDIO.md).
 
-import { app, BrowserWindow, ipcMain, protocol, shell, Menu } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol, shell, Menu, session } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
@@ -57,8 +57,9 @@ const MIME = {
 
 function servePath(rel) {
   const parts = rel.split('/').filter(Boolean);
-  // no dotfiles/dotfolders (.git, .wrangler, .env …); node_modules only for three.js
-  if (parts.some((s) => s.startsWith('.'))) return null;
+  // no dotfiles/dotfolders (.git, .wrangler, .env …), no Windows short names (GIT~1 is .git), no
+  // alternate data streams or backslashes; node_modules only for three.js
+  if (parts.some((s) => s.startsWith('.') || /~\d/.test(s) || s.includes(':') || s.includes('\\'))) return null;
   if (parts[0] === 'node_modules' && parts[1] !== 'three') return null;
   const abs = path.resolve(ROOT, ...parts);
   return D.inside(ROOT, abs) ? abs : null;
@@ -79,12 +80,33 @@ function noteHostFile(host, rel) {
   set.add(p);
 }
 
+// What each origin may read. The studio (studio://app) reads the whole folder. A game's frames and
+// windows (studio://host-<id>, play-<id>, sound-<id>) run AI-written code, so they read only their own
+// game, the shared engine (games without their own copy still import it), the studio's frame pages
+// and three.js — never another game, local/ (the person's private profile) or the design library.
+const GAME_ORIGIN = /^(?:host|play|sound)-([a-z0-9][a-z0-9-]{0,47})$/;
+function originMay(host, rel) {
+  if (host === 'app') return true;
+  const m = GAME_ORIGIN.exec(host);
+  if (!m) return false;
+  const p = rel.replace(/^\/+/, '');
+  return p.startsWith(`games/${m[1]}/`) || p.startsWith('engine/') || p.startsWith('studio/ui/') || p.startsWith('node_modules/three/');
+}
+// The real path of a file must not pass through a dot folder either (a link, a short name).
+async function realInside(abs) {
+  try {
+    const real = await fsp.realpath(abs);
+    const rel = path.relative(await fsp.realpath(ROOT), real);
+    return !rel.startsWith('..') && !path.isAbsolute(rel) && !rel.split(path.sep).some((s) => s.startsWith('.'));
+  } catch { return true; } // not there: the read below answers 404
+}
+
 async function handleProtocol(req) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return new Response('method not allowed', { status: 405 });
   let rel, url;
   try { url = new URL(req.url); rel = decodeURIComponent(url.pathname); } catch { return new Response('bad url', { status: 400 }); }
   let abs = servePath(rel);
-  if (!abs) return new Response('forbidden', { status: 403 });
+  if (!abs || !originMay(url.host, rel) || !(await realInside(abs))) return new Response('forbidden', { status: 403 });
   noteHostFile(url.host, rel);
   try {
     let st = await fsp.stat(abs);
@@ -230,12 +252,13 @@ async function captureMoment(projectId) {
 const projectEdits = new Map(); // projectId -> repo-relative editsDir (forward slashes)
 async function refreshProjectCache() {
   projectEdits.clear();
-  for (const p of await D.listProjects()) projectEdits.set(p.id, p.editsDir);
+  for (const p of await D.listProjects({ broken: true })) projectEdits.set(p.id, p.editsDir);
 }
 
 const pending = new Map();
 let flushTimer = null;
 function queueChange(change) {
+  if (change.kind === 'projects') D.invalidateProjects(); // a game appeared, went, or its game.json changed
   const key = `${change.kind}:${change.project || ''}:${change.style || ''}${change.external ? ':ext' : ''}`;
   const cur = pending.get(key) || { ...change, files: [] };
   if (change.file && !cur.files.includes(change.file)) {
@@ -315,7 +338,10 @@ function classify(top, rel) {
 
 // OS watchers + async scoped rescans + a slow async full sweep (studio/main/watch.mjs).
 const TOPS = ['games', 'designs', 'local', 'engine'];
-const watcher = createWatcher({ root: ROOT, tops: TOPS, classify, onChange: queueChange });
+// The games swept in full: those the studio opened this session (their art host loaded files) and
+// those running; every other game is swept shallowly (watch.mjs).
+const focusGames = () => new Set([...hostFiles.keys(), ...games.keys()]);
+const watcher = createWatcher({ root: ROOT, tops: TOPS, classify, onChange: queueChange, focus: focusGames });
 function startWatchers() { for (const d of [D.DIRS.games, D.DIRS.ideas, D.DIRS.inbox, D.DIRS.localDesigns]) fs.mkdirSync(d, { recursive: true }); return watcher.start().catch((err) => console.error('[studio] watcher start:', err.message)); }
 
 // --------------------------------------------------------------------- IPC ---
@@ -328,7 +354,9 @@ function handle(channel, fn) {
 
 function registerIpc() {
   handle('app:info', () => ({ root: ROOT, version: app.getVersion(), electron: process.versions.electron, capture: !!CAPTURE, stages: D.STAGES, sizes: D.SIZES, kinds: D.REQUEST_KINDS }));
-  handle('projects:list', () => D.listProjects());
+  // broken games (game.json unreadable) are listed too, marked `broken`, so nothing open is lost
+  handle('projects:list', () => D.listProjects({ broken: true }));
+  handle('projects:summary', () => D.gameSummaries());
   handle('projects:update', (id, patch) => D.updateProject(id, patch));
   handle('projects:create', async (opts) => { const r = await D.createProject(opts); await refreshProjectCache(); return r; });
   handle('projects:check', (id) => D.checkProject(id));
@@ -359,6 +387,7 @@ function registerIpc() {
   handle('ideas:delete', (id) => D.deleteIdea(id));
 
   handle('styles:list', () => D.listStyles());
+  handle('styles:summary', (id) => D.styleSummary(D.assertId('project', id)));
   handle('styles:read', (id) => D.readStyle(id));
   handle('lessons:append', (styleId, lesson, card) => { if (!styleId) throw new Error('this game has no design/ folder yet, so there is nowhere to keep the lesson'); return D.appendLesson(styleId, lesson, card); });
   handle('lessons:read', (styleId, opts) => D.readLessons(styleId, opts || {}));
@@ -376,7 +405,8 @@ function registerIpc() {
   handle('shell:open', async (rel, reveal) => {
     const abs = servePath(String(rel || '').replace(/\\/g, '/'));
     if (!abs || !fs.existsSync(abs)) throw new Error('not found');
-    if (reveal) { shell.showItemInFolder(abs); return true; }
+    // a script would RUN when opened (Windows runs .js with Script Host): show it in its folder instead
+    if (reveal || /\.(m?js|cjs|bat|cmd|ps1|vbs|wsf|exe|com|lnk|sh)$/i.test(abs)) { shell.showItemInFolder(abs); return true; }
     const err = await shell.openPath(abs);
     if (err) throw new Error(err);
     return true;
@@ -456,11 +486,19 @@ if (!CAPTURE && !app.requestSingleInstanceLock()) {
   });
   app.whenReady().then(async () => {
     protocol.handle('studio', handleProtocol);
+    // Permissions: the studio (studio://app) may use the microphone ("hum a melody") and the clipboard;
+    // a game may go fullscreen and lock the pointer. Everything else is refused (Electron's default
+    // would grant it — a game is AI-written code).
+    const GAME_OK = new Set(['fullscreen', 'pointerLock']);
+    const allowed = (origin, perm) => /^studio:\/\/app(\/|$)/.test(origin || '') || GAME_OK.has(perm);
+    session.defaultSession.setPermissionRequestHandler((wc, perm, cb, details) => cb(allowed(details.requestingUrl || (wc && wc.getURL()), perm)));
+    session.defaultSession.setPermissionCheckHandler((wc, perm, origin) => allowed(origin, perm));
     Menu.setApplicationMenu(Menu.buildFromTemplate([
       { label: 'Studio', submenu: [{ role: 'reload', label: 'Reload studio UI' }, { role: 'toggleDevTools' }, { type: 'separator' }, { role: 'quit' }] },
       { role: 'editMenu' },
       { label: 'View', submenu: [{ role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }] },
     ]));
+    D.cacheProjects(1500); // the calls of one moment share one scan of games/; the watcher resets it on any game change
     await refreshProjectCache();
     registerIpc();
     await registerFeatureIpc();

@@ -99,7 +99,7 @@ export function runTool(params, name, { page = 'studio/ui/tools.html', waitMs = 
 export function findSource(pid, aid) {
   const base = path.join(D.ROOT, 'games', pid, 'game');
   const files = [];
-  const walk = (dir) => { for (const e of fs.readdirSync(dir, { withFileTypes: true })) { if (e.name === 'lib' || e.name === 'edits') continue; const p = path.join(dir, e.name); if (e.isDirectory()) walk(p); else if (e.name.endsWith('.js')) files.push(p); } };
+  const walk = (dir) => { for (const e of fs.readdirSync(dir, { withFileTypes: true })) { if (e.name === 'edits' || e.name === 'node_modules') continue; const p = path.join(dir, e.name); if (e.isDirectory()) walk(p); else if (e.name.endsWith('.js')) files.push(p); } };
   try { walk(base); } catch { return null; }
   const esc = aid.replace(/\./g, '\\.'); // asset ids are [A-Za-z0-9_.-]
   const re = new RegExp('^\\s*[\'"]?' + esc + '[\'"]?\\s*:'); // an object key at the start of a line, not a comment

@@ -165,6 +165,10 @@ export class SoundView {
   async reloadEdits({ keepWork = true } = {}) {
     const pid = this.project.id;
     this.disk = await window.studio.sound.edits(pid).catch(() => ({ songs: {}, sfx: {}, instruments: null, invalid: [] }));
+    // a broken edit file (a merge conflict…) is said out loud; saving waits until it's fixed (the data layer refuses)
+    const bad = (this.disk.invalid || []).map((b) => `${b.file} (${b.errors.join('; ')})`).join(' · ');
+    if (bad && bad !== this._badShown) toast(`Sound edits that can't be read — nothing is saved until they're fixed: ${bad}`, { kind: 'warn', timeout: 15000 });
+    this._badShown = bad;
     const base = this.data.base;
     this.applied = applySoundEdits(base, { songs: this.disk.songs, sfx: this.disk.sfx, instruments: this.disk.instruments || {} });
     const instDirty = !same(this.inst.work, this.inst.saved) && this.inst.pid === pid;

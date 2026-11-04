@@ -201,7 +201,15 @@ export class ArtView {
     // "new" = ids not seen before in this project (first visit: everything counts as seen)
     const seenKey = `ps.seen.${pid}`;
     let seen = ls.get(seenKey, null);
-    if (!seen) { seen = listing.assets.map((a) => a.id); ls.set(seenKey, seen); }
+    if (!seen) seen = listing.assets.map((a) => a.id);
+    else if (!listing.failed) seen = seen.filter((id) => this.byId.has(id)); // ids of deleted assets go
+    ls.set(seenKey, seen);
+    // only the last dozen games keep this memory (every asset id of 200 games would fill the browser's
+    // storage, and a full storage silently stops saving the studio's other state); a game that drops
+    // out simply starts fresh: everything counts as seen on its next visit
+    const order = [pid, ...ls.get('ps.seen.order', []).filter((x) => x !== pid)];
+    for (const old of order.slice(12)) localStorage.removeItem(`ps.seen.${old}`);
+    ls.set('ps.seen.order', order.slice(0, 12));
     this.seen = new Set(seen);
     if (reason === 'code' && !listing.failed) {
       const added = listing.assets.filter((a) => !prevIds.has(a.id)).map((a) => a.id);
@@ -280,7 +288,13 @@ export class ArtView {
     const ids = all ? [...this.sessions.keys()] : [...named].filter((id) => id !== this.savingId);
     for (const id of ids) {
       if (this.savingId === id) continue;
-      const disk = await window.studio.edits.read(pid, id).catch(() => null);
+      let disk;
+      try { disk = await window.studio.edits.read(pid, id); } catch (err) {
+        // the person's edit file is there but can't be read (a merge conflict, a half-written file):
+        // keep everything as it is — never reload it as "no edits" (a save would then go over it)
+        toast(`${id}: ${err.message}`, { kind: 'warn', timeout: 12000 });
+        continue;
+      }
       if (!all) {
         if (disk) this.summary[id] = summarizeEdit(disk); else delete this.summary[id];
         this.editCache.delete(id);
@@ -515,7 +529,14 @@ export class ArtView {
     let s = this.sessions.get(id);
     if (!s) {
       this.renderEmptyStage('Loading frames…', a.name);
-      try { s = await this.loadSession(a); } catch (err) { this.renderEmptyStage('Could not render this asset', err.message, true); return; }
+      try { s = await this.loadSession(a); } catch (err) {
+        const broken = /can't be read/.test(err.message);
+        this.renderEmptyStage(broken ? "Your edits for this asset can't be read" : 'Could not render this asset',
+          broken ? `${err.message}
+
+Nothing is saved over them. Fix the file (often: finish a git merge), then open the asset again.` : err.message, true);
+        return;
+      }
       this.sessions.set(id, s);
     }
     this.session = s;
@@ -532,7 +553,9 @@ export class ArtView {
 
   async loadSession(a) {
     const pid = this.project.id;
-    const disk = await window.studio.edits.read(pid, a.id).catch(() => null);
+    // throws when the edit file exists but can't be read: the asset then opens as an error, never as
+    // "no edits yet" (which a save would write over the person's pixels)
+    const disk = await window.studio.edits.read(pid, a.id);
     const edit = disk ? JSON.parse(JSON.stringify(disk)) : emptyEdit(pid, a);
     const table = new ColorTable(this.pal);
     const poses = effectivePoses(a.poses, edit);

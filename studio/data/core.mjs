@@ -1,6 +1,7 @@
 // studio/data/core.mjs — the plumbing every data module shares: where things live, id
-// validation, safe paths, atomic writes, and a record of the studio's own writes (so the file
-// watcher can tell them from outside edits). Pure Node: the desktop app and the CLI both use it.
+// validation, safe paths, atomic writes, a list of files that exist but can't be read, and a record
+// of the studio's own writes (so the file watcher can tell them from outside edits). Pure Node: the
+// desktop app and the CLI both use it.
 //
 // Everything lives in plain files (docs/STUDIO.md):
 //   games/<id>/game.json                     a game (any folder with one is listed — no registry)
@@ -59,17 +60,126 @@ export const nowIso = () => new Date().toISOString();
 export const relRepo = (p) => path.relative(ROOT, p).split(path.sep).join('/');
 
 // ------------------------------------------------------------------ files ---
-export async function readJson(p, fallback = null) {
-  try { return JSON.parse(await fs.readFile(p, 'utf8')); } catch { return fallback; }
+// Files that exist but could not be read or parsed (a merge conflict, a half-written file, a
+// locked file). readJson keeps its quiet fallback for callers, but every such file is noted here
+// so the studio (a warning + the Live log) and the CLI can say so out loud. Missing files are not
+// errors. takeUnreadable() returns [{ path (repo-relative), error }] and clears the list.
+const unreadable = new Map(); // repo-relative path -> error text
+export function noteUnreadable(p, error) {
+  const rel = path.isAbsolute(String(p)) ? relRepo(p) : String(p);
+  unreadable.delete(rel); // newest last
+  unreadable.set(rel, String((error && error.message) || error || 'unreadable').slice(0, 500));
+  while (unreadable.size > 200) unreadable.delete(unreadable.keys().next().value);
 }
-export async function writeText(p, text) {
+export function takeUnreadable() {
+  const out = [...unreadable].map(([p, error]) => ({ path: p, error }));
+  unreadable.clear();
+  return out;
+}
+
+const MISSING = new Set(['ENOENT', 'ENOTDIR']);
+// Why a JSON file can't be read, in words a person can act on.
+export function whyUnreadable(text, err) {
+  if (typeof text === 'string') {
+    const lines = text.split('\n');
+    const at = lines.findIndex((l) => /^(<{7}|={7}|>{7})( |$)/.test(l));
+    if (at >= 0) return `it has merge conflict markers (line ${at + 1}) — resolve the conflict first`;
+    if (!text.trim()) return 'it is empty';
+  }
+  return `it is not valid JSON (${String((err && err.message) || err).slice(0, 200)})`;
+}
+
+// readJsonStrict: undefined when the file is missing; throws (err.unreadable = true, err.file)
+// when it exists but can't be read or parsed — so a caller never mistakes a broken file for none.
+export async function readJsonStrict(p) {
+  let text;
+  try { text = await fs.readFile(p, 'utf8'); } catch (err) {
+    if (MISSING.has(err.code)) return undefined;
+    throw unreadableError(p, `it could not be read (${err.code || err.message})`);
+  }
+  try { return JSON.parse(text); } catch (err) { throw unreadableError(p, whyUnreadable(text, err)); }
+}
+function unreadableError(p, why) {
+  const e = new Error(`${relRepo(p)} can't be read: ${why}`);
+  e.unreadable = true; e.file = relRepo(p); e.why = why;
+  noteUnreadable(p, why);
+  return e;
+}
+
+export async function readJson(p, fallback = null) {
+  try {
+    const v = await readJsonStrict(p);
+    return v === undefined ? fallback : v;
+  } catch { return fallback; } // noted in the unreadable list by readJsonStrict
+}
+
+// Run fn over items with at most n at a time (thousands of parallel reads fail with EMFILE).
+export async function mapPool(items, n, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  const worker = async () => { while (next < items.length) { const i = next++; out[i] = await fn(items[i], i); } };
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, worker));
+  return out;
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let tmpSeq = 0;
+// Retries for a rename that Windows refuses for a moment (an antivirus or indexer holding the file).
+export const RENAME_RETRY = { codes: new Set(['EPERM', 'EBUSY', 'EACCES']), waits: [15, 40, 90, 200, 400] };
+export async function renameRetry(from, to, rename = fs.rename) {
+  for (let i = 0; ; i++) {
+    try { return await rename(from, to); } catch (err) {
+      if (!RENAME_RETRY.codes.has(err.code) || i >= RENAME_RETRY.waits.length) throw err;
+      await sleep(RENAME_RETRY.waits[i]);
+    }
+  }
+}
+// Atomic write: a unique temp file next to the target (flushed to disk), then a rename over it.
+// Writes to the same file from this process go one after another (Windows refuses a rename over a
+// file another rename is replacing); between processes, renameRetry covers the moment.
+const writeQueue = new Map(); // absolute path → the last write's promise
+export function writeText(p, text) {
+  const key = path.resolve(p);
+  const prev = writeQueue.get(key) || Promise.resolve();
+  const next = prev.catch(() => {}).then(() => writeTextNow(p, text));
+  writeQueue.set(key, next);
+  next.catch(() => {}).then(() => { if (writeQueue.get(key) === next) writeQueue.delete(key); });
+  return next;
+}
+async function writeTextNow(p, text) {
   await fs.mkdir(path.dirname(p), { recursive: true });
-  const tmp = `${p}.${process.pid}.${Date.now()}.tmp`;
-  await fs.writeFile(tmp, text, 'utf8');
-  await fs.rename(tmp, p);
+  const tmp = `${p}.${process.pid}.${Date.now().toString(36)}${(++tmpSeq).toString(36)}${Math.random().toString(36).slice(2, 7)}.tmp`;
+  try {
+    const fh = await fs.open(tmp, 'wx');
+    try { await fh.writeFile(text, 'utf8'); await fh.sync().catch(() => {}); } finally { await fh.close(); }
+    await renameRetry(tmp, p);
+  } catch (err) {
+    await fs.rm(tmp, { force: true }).catch(() => {});
+    throw err;
+  }
 }
 export const writeJson = (p, data) => writeText(p, JSON.stringify(data, null, 2) + '\n');
 export const exists = (p) => fss.existsSync(p);
+export const existsAsync = (p) => fs.access(p).then(() => true, () => false);
+
+// Append one JSON line to a JSON-lines log. If the file doesn't end with a newline (a crash
+// mid-append), one is written first, so a broken line costs that line only — not the next too.
+export async function appendLine(p, line) {
+  await fs.mkdir(path.dirname(p), { recursive: true });
+  let lead = '';
+  try {
+    const fh = await fs.open(p, 'r');
+    try {
+      const { size } = await fh.stat();
+      if (size > 0) {
+        const b = Buffer.alloc(1);
+        await fh.read(b, 0, 1, size - 1);
+        if (b[0] !== 0x0a) lead = '\n';
+      }
+    } finally { await fh.close(); }
+  } catch (err) { if (!MISSING.has(err.code)) throw err; }
+  await fs.appendFile(p, lead + line + '\n', 'utf8');
+}
 
 // Recently written files, so the watcher can tell the studio's own writes from outside edits.
 // Entries older than a minute are dropped as new ones arrive, so the map stays small.

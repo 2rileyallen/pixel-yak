@@ -26,7 +26,7 @@ function resolveSafe(urlPath) {
   try { rel = decodeURIComponent(urlPath); } catch { return null; }
   if (rel.includes('\0')) return null;
   const parts = rel.split('/').filter(Boolean);
-  if (parts.some((p) => p.startsWith('.') || p.includes('\\'))) return null;
+  if (parts.some((p) => p.startsWith('.') || p.includes('\\') || p.includes(':') || /~\d/.test(p))) return null; // GIT~1 is .git (Windows short names)
   if (parts[0] === 'node_modules' && parts[1] !== 'three') return null;
   const abs = path.resolve(ROOT, ...parts);
   const back = path.relative(ROOT, abs);
@@ -34,7 +34,11 @@ function resolveSafe(urlPath) {
   return abs;
 }
 
+// Only requests addressed to this computer: a web page can't rebind its own name to 127.0.0.1 to read
+// the folder (DNS rebinding), since its Host header still says its own name.
+const LOCAL_HOST = /^(127\.0\.0\.1|localhost)(:\d+)?$/i;
 const server = http.createServer((req, res) => {
+  if (!LOCAL_HOST.test(req.headers.host || '')) { res.writeHead(403); res.end('Forbidden'); return; }
   if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405, { Allow: 'GET, HEAD' }); res.end(); return; }
   const url = new URL(req.url, `http://${HOST}`);
   if (url.pathname === '/') { res.writeHead(302, { Location: '/games/' }); res.end(); return; }

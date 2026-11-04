@@ -12,17 +12,11 @@ export class ProjectsView {
   constructor(app) {
     this.app = app;
     this.el = h('section.view.page');
-    this.editCounts = {};
   }
 
-  onShow() { this.loadCounts(); this.render(); }
-
-  async loadCounts() {
-    for (const p of this.app.projects) {
-      try { const s = await window.studio.edits.list(p.id); this.editCounts[p.id] = Object.keys(s).length; } catch { this.editCounts[p.id] = null; }
-    }
-    this.render();
-  }
+  // Every card comes from the small per-game summary (data/summary.mjs): a game that isn't open costs
+  // a folder listing and a few cached reads, never its tickets or edits.
+  async onShow() { this.render(); await this.app.reloadSummary(); this.render(); }
 
   render() {
     if (!this.app.projects) return;
@@ -39,8 +33,10 @@ export class ProjectsView {
     const app = this.app;
     const active = app.project && app.project.id === p.id;
     const ph = p.stage && app.stages[p.stage];
-    const openReq = app.requests.filter((r) => r.scope === p.id && !['done', 'wontfix', 'parked'].includes(r.status)).length;
-    const forYou = app.requests.filter((r) => r.scope === p.id && ((r.assignee === 'user' && !['done', 'wontfix', 'parked'].includes(r.status)) || (r.assignee === 'ai' && r.status === 'planned'))).length;
+    const sum = (app.summary.games || {})[p.id] || {};
+    const rq = sum.requests || {};
+    const openReq = rq.live ?? '…', forYou = rq.forYou || 0;
+    const harness = app.summary.engine;
     const running = app.running.has(p.id);
     return h(`div.pcard${active ? '.active' : ''}${p.status === 'archived' ? '.faded' : ''}`, null,
       h('div.row', { style: { alignItems: 'flex-start' } },
@@ -48,19 +44,22 @@ export class ProjectsView {
         iconBtn('chevron', 'Stage, size, status, details', (e) => this.menu(e.currentTarget, p))),
       h('div.row', { style: { flexWrap: 'wrap', gap: '5px' } },
         active ? h('span.tag.gold', null, 'open') : null,
+        p.broken ? h('span.tag.red', { title: `game.json can't be read: ${p.broken}` }, 'game.json broken') : null,
         running ? h('span.tag.jade', null, 'running') : null,
         p.status !== 'active' ? h('span.tag', null, p.status) : null,
         h('span.tag', { title: 'How big it is meant to grow (toy · demo · big)' }, p.size),
         p.designs.art ? h('span.tag.orchid', { title: 'The art design it started from (its own copy lives in design/art.md)' }, p.designs.art) : null,
         p.designs.sound ? h('span.tag.teal', { title: 'The sound design it started from' }, p.designs.sound) : null,
-        p.genre ? h('span.tag.sky', null, p.genre.slice(0, 40)) : null),
+        p.genre ? h('span.tag.sky', null, p.genre.slice(0, 40)) : null,
+        sum.engine == null ? h('span.tag', { title: `Runs on the harness's shared engine: any change there reaches it at once. Give it its own copy: node cli/yak.mjs engine-adopt ${p.id}` }, 'shared engine')
+          : h(`span.tag${harness != null && sum.engine !== harness ? '.fire' : ''}`, { title: harness != null && sum.engine !== harness ? `Its engine copy is v${sum.engine}; the harness has v${harness}. See what's new: node cli/yak.mjs engine ${p.id}` : 'Its own engine copy (games/<id>/engine/)' }, `engine v${sum.engine}`)),
       p.description ? h('div.desc', null, p.description) : null,
       h('div.col', { style: { gap: '5px' } },
         h('div.phase-track', { title: 'Stage: idea → prototype → production → polish → released' }, app.stages.filter(Boolean).map((s) => h(`i${p.stage && s.n < p.stage ? '.done' : ''}${p.stage === s.n ? '.now' : ''}`))),
         h('div.phase-label', null, ph ? h('span', null, h('b', null, ph.name), h('span.dim', null, ` — “${ph.gate}”`)) : h('span.dim', null, 'Stage not set'))),
       h('div.stats', null,
-        h('span', null, h('b', null, this.editCounts[p.id] ?? '…'), 'edited assets'),
-        h('span', null, h('b', null, openReq), 'open requests'),
+        h('span', null, h('b', null, sum.edits ?? '…'), sum.edits === 1 ? 'edited asset' : 'edited assets'),
+        h('span', null, h('b', null, openReq), openReq === 1 ? 'open request' : 'open requests'),
         forYou ? h('span', { style: { color: 'var(--fire)' } }, h('b', null, forYou), 'for you') : null,
         p.updatedAt ? h('span', null, timeAgo(p.updatedAt)) : null),
       h('div.acts', null,

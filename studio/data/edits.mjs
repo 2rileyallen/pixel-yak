@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { ROOT, EDITS, assertId, isId, inside, within, nowIso, readJsonStrict, relRepo, markWrite, writeJsonMarked, writeTextMarked } from './core.mjs';
 import { getProject, projectDir } from './games.mjs';
+import { formatFor } from './formats.mjs';
 export async function editsDir(projectId) {
   const p = await getProject(projectId);
   if (!p) throw new Error(`project ${projectId} not found`);
@@ -71,7 +72,7 @@ function refuseIfBroken(dir, cache, what) {
   const bad = [...cache].filter(([, e]) => !e.ok);
   if (!bad.length) return;
   const list = bad.map(([f, e]) => `${relRepo(path.join(dir, f))} (${e.why})`).join('; ');
-  const err = new Error(`${what} refused: ${list}. Those are the person's edits: fix the file (resolve the conflict), never delete it — then save again.`);
+  const err = new Error(`${what} refused: ${list}. Those are the person's edits: fix the file (e.g. resolve a merge conflict), never delete it — then save again.`);
   err.unreadable = true;
   throw err;
 }
@@ -93,7 +94,7 @@ export async function rebuildEditsIndex(projectId) {
 export async function writeEdit(projectId, assetId, edit) {
   assertId('asset', assetId);
   if (!edit || edit.asset !== assetId) throw new Error('edit.asset must match the asset id');
-  edit.format = EDITS.EDITS_FORMAT;
+  edit.format = await formatFor(projectId, 'edits', EDITS.EDITS_FORMAT); // only what the game's own engine reads
   edit.project = projectId;
   const errs = EDITS.checkEdit(edit);
   if (errs.length) throw new Error(`invalid edit: ${errs.join('; ')}`);

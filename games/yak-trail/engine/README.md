@@ -22,9 +22,21 @@ goes over it without `--force`.
 
 ## What the studio and the CLI read with it
 `art/edits.js`, `art/propagate.js`, `sound/edits.js`, `sound/notation.js`, `sound/song.js`,
-`sound/render.js`, `sound/midi.js`, `sound/pitch.js`. The studio and the CLI use the **harness's**
-copy of these to read every game's edits and songs, so their file formats are contracts
-(`docs/contracts/ART.md`, `SOUND.md`): a new version keeps reading the old.
+`sound/render.js`, `sound/midi.js`, `sound/pitch.js`. The studio runs the **harness's** copy of these
+for every game (game code runs only in each game's own sandboxed frames and windows), so a game on
+an older copy depends on these rules:
+- **Formats.** `EDITS_FORMATS` (`art/edits.js`) and `SOUND_EDIT_FORMATS` (`sound/edits.js`) list
+  every format this engine reads, as plain strings. A format's meaning never changes: a new meaning
+  gets a new string, added to the list, and an old one is never dropped. Before the studio writes a
+  file into a game it reads that list from the game's copy (as text, `studio/data/formats.mjs`) and
+  writes only a format the game reads. If it can't, nothing is saved and it says to pull the engine.
+  So a new format adds a writer for the old one too, or games still on the old one can't be edited.
+- **The generated index modules** (`editsIndexSource` in both) are frozen byte for byte
+  (`tests/formats.test.mjs`): every game imports them.
+- **Sound preview.** The Sound view plays with the harness's engine. When a game's copy may sound
+  different (a **Changes sound** entry since its version, or its own changes to `sound/`), the view
+  says so. The CLI's sound commands use the game's own copy, so `render-song` measures what the game
+  plays.
 
 ## Frozen, and changes that move things
 - **Frozen:** `hash`, `rng` (`shell/runtime.js`), `bayer` (`art/pix.js`) and `mulberry32`

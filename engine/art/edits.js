@@ -23,7 +23,13 @@
 //
 // Pure data helpers work in Node (the CLI uses them); canvas helpers need a DOM.
 
+// The format this version writes, and every format it reads (written out as plain strings: the
+// studio reads this list from each game's engine copy as text, to write the game only what it can
+// read). A format's meaning never changes. A new meaning gets a new string, added to EDITS_FORMATS;
+// an old one is never dropped, so a game's edits stay readable by every later engine
+// (docs/contracts/ART.md → Versions).
 export const EDITS_FORMAT = 'pixel-studio-edits@1';
+export const EDITS_FORMATS = Object.freeze(['pixel-studio-edits@1']);
 
 // Single characters usable as legend keys ('.', '-', ' ', '"' and '\' are reserved).
 export const LEGEND_ALPHABET =
@@ -195,11 +201,12 @@ export function forEachEditPixel(pe, legend, fn) {
 
 // ---------------------------------------------------------- validation ---
 const ID_RE = /^[A-Za-z0-9_.-]{1,96}$/;
-// Shape check used by the studio, the CLI and the runtime before trusting a file.
-export function checkEdit(edit) {
+// Shape check used by the studio, the CLI and the runtime before trusting a file. `formats`: the
+// formats accepted (default: every one this engine reads).
+export function checkEdit(edit, formats = EDITS_FORMATS) {
   const errs = [];
   if (!edit || typeof edit !== 'object') return ['not an object'];
-  if (edit.format !== EDITS_FORMAT) errs.push(`format must be "${EDITS_FORMAT}"`);
+  if (!formats.includes(edit.format)) errs.push(`format ${JSON.stringify(edit.format ?? null)} isn't one this engine reads (${formats.join(', ')})`);
   if (!ID_RE.test(String(edit.asset || ''))) errs.push('bad asset id');
   if (edit.legend && typeof edit.legend !== 'object') errs.push('legend must be an object');
   for (const [ch, ref] of Object.entries(edit.legend || {})) {

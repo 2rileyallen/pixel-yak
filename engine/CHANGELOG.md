@@ -7,6 +7,14 @@ full checks run before it's kept. One entry per version, newest first. Say what 
 when it pulls (a renamed function, a new argument), and never change what an existing function
 returns for the same input in a way that moves art, maps or music (see README.md → Frozen).
 
+## 3 — 2026-11-04
+- `art/edits.js`: `EDITS_FORMATS`, every edit format this engine reads (an old one is never
+  dropped). `checkEdit(edit, formats?)` accepts any of them; its message for a wrong format changed.
+- `sound/edits.js`: the same, `SOUND_EDIT_FORMATS` and `checkSoundEdit(ed, formats?)`.
+- Nothing a game calls changed what it returns for a file it already read: no art moves, no sound
+  changes. A game on v2 keeps working with the studio as it is (the studio writes it `@1`, which it
+  reads); pull v3 so a later engine's formats can be added beside the old ones.
+
 ## 2 — 2026-11-02
 - **Games get their own copy.** This file, `version.json` and `README.md` travel with the copy.
 - `shell/systems.js` (new): a game as a list of systems, each owning one slice of the state, with

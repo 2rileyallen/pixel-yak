@@ -11,6 +11,7 @@ import { pathToFileURL } from 'node:url';
 import { ROOT, assertId, isId, inside, within, str, nowIso, readJson, relRepo, markWrite, writeJsonMarked, writeTextMarked, exists, appendLine, readJsonStrict } from './core.mjs';
 import { projectDir } from './games.mjs';
 import { readLines } from './lessons.mjs';
+import { formatFor, gameReads } from './formats.mjs';
 
 export const SOUND = await import(pathToFileURL(path.join(ROOT, 'engine', 'sound', 'edits.js')).href);
 
@@ -59,7 +60,7 @@ export async function readSoundEdits(projectId) {
 async function refuseIfBroken(projectId, what) {
   const all = await readSoundEdits(projectId);
   if (!all.invalid.length) return all;
-  const err = new Error(`${what} refused: ${all.invalid.map((b) => `${b.file} (${b.errors.join('; ')})`).join('; ')}. Those are the person's sound edits: fix the file (resolve the conflict), never delete it — then save again.`);
+  const err = new Error(`${what} refused: ${all.invalid.map((b) => `${b.file} (${b.errors.join('; ')})`).join('; ')}. Those are the person's sound edits: fix the file (e.g. resolve a merge conflict), never delete it — then save again.`);
   err.unreadable = true;
   throw err;
 }
@@ -75,7 +76,7 @@ export async function rebuildSoundIndex(projectId) {
 // Returns the edit as written, or null when it was removed.
 export async function writeSoundEdit(projectId, ed) {
   if (!ed || typeof ed !== 'object') throw new Error('no edit');
-  ed.format = SOUND.SOUND_EDIT_FORMAT;
+  ed.format = await formatFor(projectId, 'sound', SOUND.SOUND_EDIT_FORMAT); // only what the game's own engine reads
   ed.game = projectId;
   const id = ed.kind === 'song' ? ed.song : ed.kind === 'sfx' ? ed.sfx : null;
   const errs = SOUND.checkSoundEdit(ed);
@@ -168,5 +169,11 @@ export async function checkSoundFiles(projectId) {
   if (!exists(path.join(info.editsDir, 'index.js'))) out.push(`WARN ${info.editsRel}/index.js missing — run: node cli/yak.mjs sound-index ${projectId}`);
   const all = await readSoundEdits(projectId);
   for (const x of all.invalid) out.push(`ERROR ${x.file}: ${x.errors.join('; ')}`);
+  // a file the harness reads but the game's own engine doesn't: the game would quietly ignore it
+  const reads = await gameReads(projectId, 'sound');
+  if (reads) {
+    const files = [...Object.entries(all.songs).map(([id, ed]) => [`song.${id}.json`, ed]), ...Object.entries(all.sfx).map(([id, ed]) => [`sfx.${id}.json`, ed]), ...(all.instruments ? [['instruments.json', all.instruments]] : [])];
+    for (const [f, ed] of files) if (!reads.includes(ed.format)) out.push(`ERROR ${info.editsRel}/${f} is ${ed.format}, which this game's own engine doesn't read (it reads ${reads.join(', ') || 'nothing'}): the game ignores it — engine ${projectId}, then engine-pull`);
+  }
   return out;
 }

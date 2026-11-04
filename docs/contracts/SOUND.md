@@ -76,6 +76,10 @@ sound effect is `{ vol, layers: [hit layers, { note, every, inst, len, vel }, { 
 Written only by the studio (or `node cli/yak.mjs` on the user's word). Format and code:
 `engine/sound/edits.js`.
 
+**Versions.** A format string's meaning never changes. A new one is added to `SOUND_EDIT_FORMATS`,
+and old ones stay readable forever. The studio writes a game only a format its own engine copy reads
+(`studio/data/formats.mjs`).
+
 ```json
 { "format": "pixel-yak-sound-edit@1", "kind": "song", "game": "my-game", "song": "theme",
   "bpm": 120, "baseBpm": 112,

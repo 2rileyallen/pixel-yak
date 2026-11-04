@@ -282,8 +282,11 @@ export class SoundView {
   renderList() {
     if (!this.data) return;
     const p = this.project, base = this.data.base;
+    const differs = this.info.soundDiffers || [];
     mount(this.listHead, h('div.snd-title', null, icon('sound'), h('b', null, 'Sound'), h('span.dim', null, p.name)),
-      h('div.dim.snd-path', { title: 'The game\'s sound module (its songs and sound effects)' }, this.info.module));
+      h('div.dim.snd-path', { title: 'The game\'s sound module (its songs and sound effects)' }, this.info.module),
+      differs.length ? h('div.snd-engine-note', { role: 'note', title: `The studio plays with Pixel Yak's engine; the game plays with its own copy, and ${differs.join('; ')}. Your edits are saved in the game's own format either way. To compare: node cli/yak.mjs engine ${p.id}` },
+        'Played with Pixel Yak\'s sound engine — it differs from this game\'s own, so a song may sound a little different in the game.') : null);
     const reqs = this.app.requestsFor(p.id).filter((r) => (r.status === 'open' || r.status === 'in-progress') && r.target);
     const row = (kind, id, name, sub) => {
       const s = this.sessions.get(`${kind}:${id}`);

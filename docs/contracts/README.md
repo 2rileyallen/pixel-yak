@@ -3,6 +3,8 @@
 Pixel Yak is modular. The studio, the CLI, the engine and each game are separate boxes that only meet
 through these formats. Keep a format and you can rebuild either side of it freely. Change a format on
 purpose: update its page, bump its version string, and keep reading the old version where you can.
+The person's pixel and sound edits are stricter: every old format stays readable forever, and the
+studio writes each game only a format its own engine copy reads (ART.md and SOUND.md → Versions).
 
 | Contract | What it covers | Page |
 |---|---|---|

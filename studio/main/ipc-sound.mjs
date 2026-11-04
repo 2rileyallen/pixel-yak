@@ -12,7 +12,8 @@ export function register({ handle, D, games }) {
 
   handle('sound:info', async (pid) => {
     const i = await D.soundInfo(pidOf(pid));
-    return { module: i.moduleRel, edits: i.editsRel, hasModule: i.hasModule, design: i.design };
+    // the Sound view plays with the harness's engine: say so when this game's own sound engine differs
+    return { module: i.moduleRel, edits: i.editsRel, hasModule: i.hasModule, design: i.design, soundDiffers: D.soundDiffers(pid) };
   });
   handle('sound:edits', (pid) => D.readSoundEdits(pidOf(pid)));
 

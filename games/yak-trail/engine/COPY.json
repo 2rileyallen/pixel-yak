@@ -1,12 +1,12 @@
 {
   "note": "Written by node cli/yak.mjs engine-pull / engine-adopt: the engine version this game has and each file as it was copied, so local changes and harness updates can be told apart. Don't edit.",
-  "version": 2,
-  "harness": "1063c39+uncommitted",
-  "copied": "2026-11-02",
+  "version": 3,
+  "harness": "c149581+uncommitted",
+  "copied": "2026-11-04",
   "files": {
-    "CHANGELOG.md": "fed59badd411",
-    "README.md": "acf75aff885d",
-    "art/edits.js": "c13de587185d",
+    "CHANGELOG.md": "1ea00649fc8b",
+    "README.md": "7c809da176c4",
+    "art/edits.js": "82a072beb27b",
     "art/font-art.js": "0f297aa857ba",
     "art/parts.js": "8a3eaedcdf22",
     "art/pix.js": "b2a675362c4c",
@@ -23,7 +23,7 @@
     "shell/saves.js": "ef4d9cb2b2f8",
     "shell/systems.js": "967c6ee30198",
     "shell/widgets.js": "79568b4baeb7",
-    "sound/edits.js": "61aec3126a65",
+    "sound/edits.js": "6958807d8bf7",
     "sound/index.js": "d9f9eaf4de42",
     "sound/midi.js": "99bb2e1d9b34",
     "sound/notation.js": "f787240dc55d",
@@ -33,6 +33,6 @@
     "sound/song.js": "19170999018c",
     "sound/synth.js": "74b8afa126d3",
     "sound/worklet.js": "5ea4100e78d1",
-    "version.json": "51c7f0d21c74"
+    "version.json": "38b473adfe94"
   }
 }

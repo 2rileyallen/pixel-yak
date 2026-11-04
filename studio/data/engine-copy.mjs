@@ -53,6 +53,20 @@ export function engineStatus(pid) {
   return { own: true, version: (readJ(path.join(dir, 'version.json')) || {}).version ?? null, harness, local: local.sort(), fresh: fresh.sort(), both, copiedFrom: copy.harness || '', copiedAt: copy.copied || '' };
 }
 
+// Why the studio's Sound view (which plays with the harness's engine) may not sound like the game
+// (which plays with its own copy): [] when it should, else reasons in plain words. Reads the
+// changelog's "Changes sound" markers (engine/CHANGELOG.md) and the game's own changes to its copy.
+export function soundDiffers(pid) {
+  const s = engineStatus(pid);
+  if (!s.own) return [];
+  const out = [];
+  if (Number(s.version) > Number(s.harness)) out.push(`this game's engine (v${s.version}) is newer than Pixel Yak's (v${s.harness})`);
+  else if (changelogSince(s.version).some((n) => /Changes sound/.test(n))) out.push(`Pixel Yak's engine changed how things sound since this game's v${s.version}`);
+  const local = s.local.filter((n) => n.startsWith('sound/'));
+  if (local.length) out.push(`this game changed its own copy of ${local.join(', ')}`);
+  return out;
+}
+
 function harnessCommit() {
   const r = spawnSync('git', ['-C', D.ROOT, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' });
   const dirty = spawnSync('git', ['-C', D.ROOT, 'status', '--porcelain', '--', 'engine'], { encoding: 'utf8' });

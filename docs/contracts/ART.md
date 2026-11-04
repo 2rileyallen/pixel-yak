@@ -60,6 +60,11 @@ yak: {
 One file per edited asset, written by the studio: `games/<id>/game/art/edits/<asset>.json`, format
 `pixel-studio-edits@1`. Never edit these by hand — they are the user's work.
 
+**Versions.** A format string's meaning never changes. A new meaning gets a new string, added to
+`EDITS_FORMATS` in `engine/art/edits.js`, and every old one stays readable forever. The studio writes
+a game only a format that game's own engine copy reads (`studio/data/formats.mjs`), so a game that
+shipped on an older engine never receives a file it would ignore.
+
 ```json
 { "format": "pixel-studio-edits@1", "project": "yak-trail", "asset": "yak",
   "contract": { "fw": 32, "fh": 24, "ax": 15, "ay": 23 },

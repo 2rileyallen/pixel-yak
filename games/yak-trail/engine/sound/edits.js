@@ -17,7 +17,11 @@
 //   index.js            generated: export const SOUND_EDITS = { songs: {…}, sfx: {…}, instruments: {…} };
 import { tokenize, formatTokens, trackKeys, hashTokens, hashText, stableJson, stepsPerBar, tokenPitch, TRACK_FIELDS } from './notation.js';
 
+// The format this version writes, and every format it reads, as plain strings (the studio reads the
+// list from each game's engine copy as text). A format's meaning never changes; a new one is added to
+// the list and an old one is never dropped (docs/contracts/SOUND.md → Versions).
 export const SOUND_EDIT_FORMAT = 'pixel-yak-sound-edit@1';
+export const SOUND_EDIT_FORMATS = Object.freeze(['pixel-yak-sound-edit@1']);
 export const EMPTY_EDITS = Object.freeze({ songs: {}, sfx: {}, instruments: {} });
 const MIX = ['vol', 'pan', 'echo', 'mute'];
 const clone = (o) => (o == null ? o : JSON.parse(JSON.stringify(o)));
@@ -191,10 +195,11 @@ export const isEmptyEdit = (ed) => !ed || (ed.kind === 'song' ? !Object.keys(ed.
   : !Object.keys(ed.instruments || {}).length);
 
 // ------------------------------------------------------------------ check ---
-export function checkSoundEdit(ed) {
+// `formats`: the formats accepted (default: every one this engine reads).
+export function checkSoundEdit(ed, formats = SOUND_EDIT_FORMATS) {
   const errs = [];
   if (!ed || typeof ed !== 'object') return ['not an object'];
-  if (ed.format !== SOUND_EDIT_FORMAT) errs.push(`format must be "${SOUND_EDIT_FORMAT}"`);
+  if (!formats.includes(ed.format)) errs.push(`format ${JSON.stringify(ed.format ?? null)} isn't one this engine reads (${formats.join(', ')})`);
   if (!['song', 'sfx', 'instruments'].includes(ed.kind)) errs.push('kind must be song, sfx or instruments');
   const tok = (t) => typeof t === 'string' && t.length > 0 && t.length <= 64 && !/\s/.test(t);
   if (ed.kind === 'song') {

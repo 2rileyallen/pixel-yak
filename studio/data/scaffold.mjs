@@ -13,6 +13,7 @@ import { readAllEdits } from './edits.mjs';
 import { createRequest } from './requests.mjs';
 import { copyDesign, findDesign } from './designs.mjs';
 import { copyEngine, engineStatus, outsideImports, harnessEngineVersion } from './engine-copy.mjs';
+import { gameReads } from './formats.mjs';
 
 const TEXT = new Set(['.md', '.js', '.mjs', '.cjs', '.json', '.html', '.css', '.txt']);
 
@@ -133,9 +134,12 @@ export async function checkProject(id) {
   if (!p.hasGame) out.push(`WARN ${p.gamePath} missing — nothing to play yet`);
   const dir = path.resolve(ROOT, p.editsDir);
   if (!exists(path.join(dir, 'index.js'))) out.push(`WARN ${p.editsDir}/index.js missing — run: node cli/yak.mjs edits-index ${id}`);
+  const reads = await gameReads(id, 'edits'); // null: on the harness's engine
   for (const [asset, ed] of Object.entries(await readAllEdits(id, { includeInvalid: true }))) {
     const errs = ed.unreadable ? ['not valid JSON'] : EDITS.checkEdit(ed);
     if (errs.length) out.push(`ERROR ${p.editsDir}/${asset}.json: ${errs.join('; ')}`);
+    // a file the harness reads but the game's own engine doesn't: the game would quietly ignore it
+    else if (reads && !reads.includes(ed.format)) out.push(`ERROR ${p.editsDir}/${asset}.json is ${ed.format}, which this game's own engine doesn't read (it reads ${reads.join(', ') || 'nothing'}): the game ignores it — engine ${id}, then engine-pull`);
   }
   if (!exists(path.join(DIRS.games, id, 'AGENTS.md'))) out.push(`WARN games/${id}/AGENTS.md missing — the one page an AI reads first`);
   // a game never reaches outside its folder (AGENTS.md hard line 5): not into another game, not into the harness

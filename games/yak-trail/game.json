@@ -19,7 +19,7 @@
     "art": "gba-bright",
     "game": "basics"
   },
-  "engine": "2",
+  "engine": "3",
   "description": "The demo game: a shaggy little yak trots up a mountain trail, hops over rocks and gaps, munches grass tufts and reaches the flags at the summit. One to three minutes.",
   "idea": null,
   "createdAt": "2026-11-02T15:05:10.889Z",

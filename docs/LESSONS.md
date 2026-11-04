@@ -102,10 +102,22 @@ right section (what, why). Keep the file lean: merge entries instead of growing 
 **Code and data that stay small as content grows**
 - Content is data: one file per thing, assembled by an index that computes derived tables. Adding
   content touches new small files.
-- Split giant classes into modules mixed onto one class (same API), moved by script.
+- **One system, one slice of the state** (`game/systems/`, `engine/shell/systems.js`). Splitting a
+  giant class into modules mixed onto one shared object made files smaller but not separable: every
+  module could touch every field, so ripping one system out meant auditing all of them, and saving
+  that object wrote the in-memory layout to disk. A system that writes only its own slice and talks
+  through events can be rewritten alone.
+- **Version saves per system, and keep a fixture per version.** A big game that bumped one save
+  number for every change ended up refusing every older save, twice. Per-system versions with
+  migrations, plus a stored save of each old version that tests must load, keep 100 hours of play
+  alive through a rewrite.
 - Generated references (asset lists, item lists) with a `--check` mode never go stale.
 - Agents' must-read stays under about 5k tokens per task, however big the game gets: one page per
-  game, design files for the current truth, the register looked up by number.
+  game, a short index of systems with one page each, the register looked up by number
+  (`yak decisions`). A single "how it plays" page and a single engineering page grew to 6k and 9k
+  tokens in nine days on a big game; `yak check` now warns before that happens.
+- History moves to `archive/`, which searches skip: a busy register's old plans otherwise answer
+  every search before the current truth does.
 
 ## Tools and tests
 - Agent-facing CLIs print one line per item by default, plus a one-shot "everything about X".
@@ -123,6 +135,10 @@ right section (what, why). Keep the file lean: merge entries instead of growing 
 - Benches are noisy while other agents run: interleave old and new runs and report medians.
 
 ## Traps (each cost real time)
+- **One shared engine for every game:** a game's old commits stopped booting the day the engine moved,
+  and a hash tweak would have reshaped saved maps. Each game keeps its own engine copy now.
+- **An editor or indexer holding a new folder** (Zed, Windows Search): deleting a just-made folder
+  fails with EBUSY for a moment. Delete with retries (`fs.rm(…, { maxRetries, retryDelay })`).
 - **A `node_modules` link inside a worktree:** removing the worktree can follow the link and delete
   the real `node_modules`. Remove the link first.
 - **The person's studio may be running** and locking files; never kill it.

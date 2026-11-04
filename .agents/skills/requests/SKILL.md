@@ -41,7 +41,8 @@ plate shared: you do what was asked, and nothing they didn't expect.
    note → verify by looking (below) → `done <id> "<what changed: files, asset ids, poses — and anything you left out>"`.
    Can't or won't: `wontfix <id> "<why>"` — never skip one silently.
 
-`start` refuses a ticket that hasn't been approved, with a message saying what to do. That is the gate
+`start` also refuses a ticket another agent is working (`claimedBy`): pick another, or ask; `--take`
+only when the user says so. `start` refuses a ticket that hasn't been approved, with a message saying what to do. That is the gate
 working, not an error to get around.
 
 ## Skipping the brief

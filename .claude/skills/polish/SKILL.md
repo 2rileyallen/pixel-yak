@@ -9,8 +9,8 @@ description: The repeatable "make it better" pass — play the game headless, lo
 ends with them playing something that changed.
 
 ## One round
-1. **Know where it's going.** Read the game's `AGENTS.md` (Now), `design/game.md`, and the latest
-   `CHANGELOG.md` entries. Skim the open tickets (`node cli/yak.mjs inbox <game>`); their requests
+1. **Know where it's going.** Read the game's `AGENTS.md` (Now), `design/game.md` (the index), the
+   `design/systems/` pages of what you'll look at, and the latest `CHANGELOG.md` entries. Skim the open tickets (`node cli/yak.mjs inbox <game>`); their requests
    come before your ideas.
 2. **Play it headless and look.**
    - Run the capture tests (`node tools/run-captures.mjs <game>`) and open the screenshots.

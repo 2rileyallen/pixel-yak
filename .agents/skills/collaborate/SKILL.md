@@ -21,8 +21,9 @@ another person's tickets, and their AI's work, reach you when you pull.
    stashing, rebasing or merging anything.
 
 ## While working
-- **Claim before you start:** `node cli/yak.mjs start <R-id>` records who is working a ticket.
-  Skip a ticket someone else has claimed, and say so.
+- **Claim before you start:** `node cli/yak.mjs start <R-id> --by <your name>` (or set `YAK_AGENT`)
+  records who is working a ticket, and `start` refuses one someone else already has. Skip it and say
+  so; `--take` only when the person says to take it over.
 - **Branch for anything not tiny**, with a name that says what it is (`weather-system`,
   `fix-title-flicker`). Small, verified fixes can go straight to main if that's how the person works.
 - **Commit explicit paths** in plain language. Other people's files and drafts stay out of your

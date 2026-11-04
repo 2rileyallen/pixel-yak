@@ -2,13 +2,17 @@
 
 A **design file** says how a game looks, sounds or plays — like the DESIGN.md files people give an
 AI to build a website in a brand's style, but for a game. Pixel Yak keeps a **library** of them on
-three shelves; every game keeps its **own copies**, which grow with it.
+three shelves, plus a fourth for **systems** (game code); every game keeps its **own copies**, which
+grow with it.
 
 ```
-designs/<shelf>/<id>/          the library (ships with Pixel Yak)        shelf = art | sound | game
+designs/<shelf>/<id>/          the library (ships with Pixel Yak)        shelf = art | sound | game | systems
 local/designs/<shelf>/<id>/    your own entries (private, same shape)    id = lowercase-with-dashes
-games/<game>/design/           a game's own copies: art.md + palette.js, sound.md + instruments.js, game.md
+games/<game>/design/           a game's own copies: art.md + palette.js, sound.md + instruments.js, genre.md
+games/<game>/game/systems/<id>/, design/systems/<id>.md, dev/systems/<id>.test.mjs   a system it copied in
 ```
+(`design/game.md` is the game's own index of itself, not a library copy. Games made before
+`genre.md` kept their game shelf copy in `game.md`; diff and promote still find it there.)
 
 ## An entry
 Every entry is a folder with a `DESIGN.md` and, for art and sound, its **code twins**:
@@ -18,6 +22,7 @@ Every entry is a folder with a `DESIGN.md` and, for art and sound, its **code tw
 | art | `DESIGN.md`, `palette.js`, optional `sample.js`, `fx.js`, `parts/` | `palette.js` is the look's palette (below); `sample.js` exports `SAMPLE_ART` (art-contract entries the Designs view draws) |
 | sound | `DESIGN.md`, `instruments.js`, `example-song.js` | the sound engine's instruments and an example (docs/contracts/SOUND.md) |
 | game | `DESIGN.md` | none |
+| systems | `DESIGN.md`, the code (`index.js` + any files it needs), `<id>.test.mjs` | the code is a system for `engine/shell/systems.js`, usually a factory that takes what it needs from the game (`followCamera({ target, view, bounds })`), so it never imports game code. Its test runs in Pixel Yak's `npm test` |
 
 `DESIGN.md` starts with `# Title`, then **one plain paragraph** (under ~45 words — the summary on
 the library card and in `yak designs`), then `##` sections:
@@ -30,6 +35,8 @@ the library card and in `yak designs`), then `##` sections:
 - **game:** this game (filled in at kickoff) · the fantasy and core loop · pacing and progression ·
   what the screen shows and explains · controls · what to build for its size · do / don't · lessons
   from games that used it · how to ask for a feature · changelog
+- **systems:** what it does (each rule with its reason) · wiring it in (a code example, where it
+  goes in the step order, its slice and what it saves) · knobs worth exposing on F8 · changelog
 
 The changelog is newest first, one dated line per lesson that shaped the entry. Write plain English
 and give every rule its reason; a library entry never names another game's characters or story.
@@ -54,8 +61,8 @@ shade by its colour); the starter art needs one of `GLOW`/`SOUL`/`SKY`/`CLOTH` a
 ## Use, promote, pull
 | Step | Command | What happens |
 |---|---|---|
-| **Use** | `node cli/yak.mjs design-use <game> <shelf> <id>` (or **New game** / `new-game --art <id> --sound <id> --game <id>`) | Copies the entry into `games/<game>/design/`: `DESIGN.md` → `<shelf>.md` (with a note saying where it started), code twins alongside; `game.json` `designs.<shelf>` records the id. **Refuses** when the game already has its own copy — that copy holds the game's learned rules. `--force` (only when the user asks) moves the old files to `design/archive/<shelf>-<time>/` first, keeps the user's first notes, and warns if the user's pixel edits or the game's code use materials the new palette lacks. |
-| **Promote** | `node cli/yak.mjs design-promote <game> <shelf> <newId> [--local] [--title ".."]` | Copies `design/<shelf>.md` + its code twins into `designs/<shelf>/<newId>/` (public) or `local/designs/…` (`--local`), drops the copy note and the user's first notes, and adds a changelog line "Promoted from …". Never copies `lessons/` or `archive/`. Then rewrite it as a general entry. |
+| **Use** | `node cli/yak.mjs design-use <game> <shelf> <id>` (or **New game** / `new-game --art <id> --sound <id> --game <id>`) | Copies the entry into the game: `DESIGN.md` → `design/<shelf>.md` (`genre.md` for the game shelf; a system's to `design/systems/<id>.md`, its code to `game/systems/<id>/`, its test to `dev/systems/`), with a note saying where it started; relative imports are rewritten for where each file lands, and engine imports point at the game's own engine copy; `game.json` `designs.<shelf>` records the id (`designs.systems` is a list). **Refuses** when the game already has its own copy — that copy holds the game's learned rules. `--force` (only when the user asks) moves the old files to `design/archive/<shelf>-<time>/` first, keeps the user's first notes, and warns if the user's pixel edits or the game's code use materials the new palette lacks. |
+| **Promote** | `node cli/yak.mjs design-promote <game> <shelf> <newId> [--local] [--title ".."]` | Copies `design/<shelf>.md` + its code twins into `designs/<shelf>/<newId>/` (public) or `local/designs/…` (`--local`), drops the copy note and the user's first notes, and adds a changelog line "Promoted from …". Never copies `lessons/` or `archive/`. A system: `--system <its id in the game>`; its imports are pointed back at the harness engine and the entry's own files, and any import still reaching into the game is listed (make it a parameter, or include it). Then rewrite it as a general entry. |
 | **Pull** | `node cli/yak.mjs design-diff <game> <shelf> [--from <id>]` | Shows the game's copy (`-`) against a library entry (`+`). A pull is done **by hand**, bringing over only what the user picks. |
 
 **Nothing flows silently.** A library change never restyles a game; a game's change never touches

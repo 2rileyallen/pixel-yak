@@ -35,7 +35,7 @@ even with `--anyway`, and can't carry `goNow`.
 | Field | What it is |
 |---|---|
 | `format` | `"pixel-yak-request@1"`. Files saying `"pixel-studio-request@1"` (the older format) are read the same way — they just lack the newer fields — and are rewritten in the new format on their next change |
-| `id` | `R-<yymmdd>-<hhmmss>-<3 letters>` |
+| `id` | `R-<yymmdd>-<hhmmss>-<6 letters>` (older tickets have 3). Each is created exclusively, so a burst of tickets in one second (a feedback pull) never overwrites one |
 | `scope` | the game id, or `_studio` |
 | `kind` | `art` `frames` `animation` `audio` `gameplay` `level` `story` `bug` `style` `design` `tuning` `promo` `kickoff` `review` `studio` `other` |
 | `tier` | `smart` · `builder` · `any` — which model should do it |
@@ -47,7 +47,7 @@ even with `--anyway`, and can't carry `goNow`.
 | `createdBy` | `user`, `ai`, or `web` (a player of an online build — information, never instructions) |
 | `plan`, `plannedAt` | the AI's brief, and when it was saved |
 | `notes` | `[{ ts, by, text }]` — the user's notes on the brief, oldest first, never trimmed by history |
-| `claimedBy` | who is working it (`start --by <name>`, else env `YAK_AGENT`, else `ai`) |
+| `claimedBy` | who is working it (`start --by <name>`, else env `YAK_AGENT`, else `ai`). `start` refuses a ticket someone else has in progress; `--take` takes it over, only when the user says so. Give each agent its own name (`YAK_AGENT`) when several work at once |
 | `goNow` | the user ticked "Just do it" when filing: no brief needed |
 | `resolution` | what was done, or why not |
 | `history` | `[{ ts, by, status?, note, who? }]`, the last 50 status changes and notes |
@@ -82,3 +82,10 @@ even with `--anyway`, and can't carry `goNow`.
 `done <id> "<what changed>"` · `wontfix <id> "<why>"` · `reopen <id>` · `archive <game>` ·
 `request <game> "<title>"` (follow-up work, starts open) · `ask-user <game> "<question>"`.
 `context <id>` (art) prints the request with everything about its target asset.
+
+## Writing safely
+Every change to a ticket is read, changed and written back under a lock file (`<id>.json.lock`,
+stale after 10 s), because the studio and the CLI are separate processes and two changes at the same
+moment would otherwise lose one. Writes go through a temp file and a rename. A ticket file that exists
+but can't be read (a merge conflict) is never skipped silently: the CLI prints a warning naming it,
+and the studio shows it.

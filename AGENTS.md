@@ -33,10 +33,14 @@ Everything else in this repo is one of two things:
 
 ## Starting a session
 1. This page.
-2. `node cli/yak.mjs inbox` and `node cli/yak.mjs games`: open requests and the games, one line each.
-3. **The person names a game** (or a request is about one): read `games/<id>/AGENTS.md`, its one
-   page. Its **Now** line says where that game stands.
-4. Then only what the task needs. The table below tells you which skill to use.
+2. **The person names a game** (or a request is about one): read `games/<id>/AGENTS.md`, its one
+   page (its **Now** line says where it stands), then `node cli/yak.mjs inbox <id>` for its tickets.
+   Read nothing about any other game.
+3. **No game named yet:** `node cli/yak.mjs games` (one line each) and `node cli/yak.mjs inbox`
+   (a count per game, never their tickets), then ask which game, or follow skill new-game.
+4. Then only what the task needs: the game's page says which file to read for which task, a
+   system's rules are on its own page (`design/systems/<id>.md`), and decisions are looked up
+   (`node cli/yak.mjs decisions <id> <#n|system>`), never read through. The table below names the skill.
 
 **Each game keeps its own knowledge.** Its state, decisions, accounts, online site and anything else
 particular to it live in its own folder: `AGENTS.md`, `DECISIONS.md`, `design/`, `skills/`.
@@ -44,13 +48,18 @@ particular to it live in its own folder: `AGENTS.md`, `DECISIONS.md`, `design/`,
   online), follow it over the general skill below.
 - **Nothing about one game goes into the harness** (this page, `docs/`, `.agents/skills/`) or into
   your memory of this folder. Working on many games here must never blur them together.
+- **Each game runs on its own copy of the engine** (`games/<id>/engine/`, imported as `../engine/`
+  from `game/`). A harness engine change reaches a game only when pulled on purpose
+  (`node cli/yak.mjs engine <id>`, `engine-pull <id>`, then its full checks). Don't edit a game's
+  copy; improve `engine/` here (with its tests and a changelog line) and pull it into the games that
+  want it. `node cli/yak.mjs check <id>` flags any import that leaves the game's folder.
 
 ## Where things are
 | Folder | What |
 |---|---|
 | `games/<id>/` | One game each, often its own git repo: `game.json`, `AGENTS.md`, `design/` (its own art, sound and game design files + what it learned), `DECISIONS.md`, `CHANGELOG.md`, `ENGINEERING.md`, `checks.json`, `skills/` (its own, e.g. its online site), `game/`, `requests/`, `dev/` |
-| `engine/` | What games import: `art/` (painter, art contract, edits), `shell/` (screen, loop, input, font, saves), `sound/`, `link/` (F8 tuning, F9 moments) |
-| `designs/` | The design library: `art/`, `sound/`, `game/` design files a new game starts from |
+| `engine/` | The master copy of what games build on (`README.md`: each module; `CHANGELOG.md`: versions): `shell/` (screen, loop, input, font, systems, saves), `art/` (painter, art contract, edits), `sound/`, `link/` (F8 tuning, F9 moments). Each game keeps its own copy |
+| `designs/` | The design library a game copies from: `art/`, `sound/`, `game/` design files, and `systems/` — game code (a camera, menus, an inventory…) a game copies in and owns |
 | `studio/` | The desktop app: `main/` (Electron), `data/` (the file layer), `ui/` (the views) |
 | `cli/yak.mjs` | Your way into the studio: requests, art context, lessons, checks, designs, clips |
 | `tools/` | Capture tests, check runner, clip recorder, linter |
@@ -66,7 +75,7 @@ particular to it live in its own folder: `AGENTS.md`, `DECISIONS.md`, `design/`,
 | Making or changing art | **art** |
 | Learning from their art edits | **art-learn** |
 | Music and sound effects | **sound** · learning from their sound edits: **sound-learn** |
-| Design files: pick, make, promote, pull | **design** |
+| Design files and the systems shelf: pick, make, promote, pull | **design** |
 | "Something's off and I can't say what" | **explore** (variants behind F8) |
 | "Make it better", run as often as you like | **polish** |
 | Performance, or a game meant to grow big | **optimize** |

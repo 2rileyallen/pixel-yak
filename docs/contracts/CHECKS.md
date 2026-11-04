@@ -53,7 +53,12 @@ full set runs before every push (the hook), so nobody has to babysit it.
   - Else, in the harness repo: the same, limited to `games/<id>/`.
   - Else (a game folder git ignores): files modified since the last run that passed.
   - `--since <ref>` compares with a commit instead of `HEAD` (e.g. everything on this branch).
-- Checks run in parallel. One line each (`PASS studio 0.5 s`); a failure prints its command and the
+- A game's own engine copy (`engine/**`) is an area like any other: the template's `checks.json`
+  gives it unit, studio and boot, so pulling an engine update runs them. An edit to the harness's
+  `engine/` changes no game (each has its own copy); it runs Pixel Yak's own `npm test`.
+- Several selected checks that each run some capture tests become **one** run of their union, so a
+  capture test never runs twice at once (two runs writing one `dev/out/<test>/` corrupt each other).
+- Checks run in parallel (up to half the CPU cores, at most 4; `--jobs n`). One line each (`PASS studio 0.5 s`); a failure prints its command and the
   part of its output that matters; a summary line; exit code 1 on any failure. `--list` shows the
   checks, the areas and the sets.
 

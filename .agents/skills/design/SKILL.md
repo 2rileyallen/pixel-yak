@@ -5,10 +5,13 @@ description: Work with Pixel Yak's design library — the art, sound and game de
 
 # Design files: pick, make, promote, pull
 
-The library (`designs/<art|sound|game>/<id>/`, the user's own in `local/designs/`) holds design files
-like the DESIGN.md files people give an AI for a website's brand — but for a game's **look**,
-**sound** and **game design**. Each game keeps its **own copies** in `games/<id>/design/` (`art.md` +
-`palette.js`, `sound.md` + `instruments.js`, `game.md`) and they grow with it. The format and the
+The library (`designs/<art|sound|game|systems>/<id>/`, the user's own in `local/designs/`) holds design
+files like the DESIGN.md files people give an AI for a website's brand — but for a game's **look**,
+**sound** and **game design** — plus a **systems** shelf: game code (a camera, menus, an inventory, a
+dialogue box) with its page and its test. Each game keeps its **own copies** and they grow with it:
+`design/art.md` + `palette.js`, `design/sound.md` + `instruments.js`, `design/genre.md` (the game
+shelf's file; `design/game.md` is the game's own index of itself), and a system as
+`game/systems/<id>/` + `design/systems/<id>.md` + `dev/systems/<id>.test.mjs`. The format and the
 commands: `docs/contracts/DESIGN-FILES.md`.
 
 ## Hard lines
@@ -62,6 +65,22 @@ made it clearly its own):
 3. Edit only the picked pieces into the game's copy, by hand; for palette changes, remember that
    ramps recolour every sprite and every edit the user painted with that material.
 4. Note it in the game's `CHANGELOG.md`; check and look.
+
+## The systems shelf: code that gets cheaper every game
+Each game writes systems; the good, general ones come back here, so the next game starts with them.
+- **Use:** `node cli/yak.mjs designs systems`, then `design-use <game> systems <id>`. Its engine
+  imports are pointed at the game's own engine copy. Wire it into `game/systems/index.js` as its page
+  says, add a row to `design/game.md`'s Systems table, run the game's tests. The copy is the game's
+  own: change it freely; nothing flows back by itself.
+- **Promote** (the user says a system is worth reusing, or you notice the same system written a
+  second time): `design-promote <game> systems <newId> --system <its id in the game> [--local]`. It
+  lists every import that reaches into the game (data, other systems): make those parameters (the
+  entry is a factory that takes what it needs, like `followCamera({ target, view, bounds })`) or
+  include them, before another game uses it. Its page says what it does, how to wire it in, its
+  knobs, and carries no names or story from the game. Its test runs in `npm test`.
+- **Pull:** `design-diff <game> systems --from <id>` shows what the library's version has; brief,
+  bring over only what the user picks, and keep the game's save migrations in step (a changed save
+  section means a new system version).
 
 ## Writing a design file (advice)
 - Follow the section list in the contract; keep one file focused (roughly 400–1200 words).

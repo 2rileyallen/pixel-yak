@@ -16,6 +16,15 @@ Read `docs/LESSONS.md` → Building big first. Then add what you learned to it w
 - **Every new system gets a bench fixture and a budget.** Behaviour-neutral work keeps the golden
   replay identical.
 - **Content is data**, one small file per thing.
+- **One system, one slice.** A system (`game/systems/<id>`) writes only its own part of the world and
+  talks to the others through events or their exported functions, so a rewrite stays inside it. Never
+  mix many modules onto one shared object: every field becomes everyone's, and the save format turns
+  into the in-memory layout.
+- **Saves are versioned per system** (`engine/shell/systems.js`): a changed save section is a new
+  version plus a migration, proven by `dev/saves/` fixtures.
+- **The reading load is a budget too.** One page per system; `yak check` warns when a must-read page
+  outgrows it (docs/contracts/README.md → the reading budget). Measure must-read tokens like any
+  other cost.
 
 The game's `ENGINEERING.md` has its own versions of these: its caches, budgets and fixtures. Keep it
 current as you add any.
@@ -60,7 +69,7 @@ current as you add any.
 
 ## Still binding during an optimization
 - The person's edits are never touched.
-- Their saves always migrate: old saves load.
+- Their saves always migrate: old saves load (a migration per changed system, a fixture per version).
 - No deploys or spending.
 - History is archived, never deleted.
 - Commit explicit paths.

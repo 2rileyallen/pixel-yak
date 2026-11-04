@@ -13,14 +13,28 @@ only what blocks you, and default the rest out loud.
 - `node cli/yak.mjs ideas` shows the person's backlog in `local/ideas/`. Their game may already be
   written down.
 - `node cli/yak.mjs designs` shows the design library: art, sound and game design files to start
-  from. Reusing a look that already learned their taste saves the most art time.
+  from, and the **systems** shelf (game code like a camera or menus to copy in). Reusing a look that
+  already learned their taste saves the most art time; reusing a system saves the most code.
 
 ## 2. Make it (skip if the studio already did)
 `node cli/yak.mjs new-game <id> --name "<Name>" --genre "<genre>" --size toy|demo|big --art <design> --sound <design> --game <design> [--idea <slug>] [--pitch "<their notes>"]`
 
 This copies `templates/blank/` into `games/<id>/`. It already boots, has the art pipeline wired
 (it shows up in the studio at once), its tests pass, and the chosen design files are copied into
-`design/`. Those copies are the game's own from now on.
+`design/` (the game shelf's file as `design/genre.md`). It also gets **its own copy of the engine**
+(`engine/`), so later harness changes never break it by surprise. All of these are the game's own
+from now on.
+
+**The shape it starts with** (keep it; it's what makes a system cheap to rewrite at hour 80):
+- `game/systems/` — the rules, one file per system (combat, inventory, the economy…), listed in
+  step order in `systems/index.js`. Each owns its slice of the world, writes only that, and talks to
+  the others through events (`engine/shell/systems.js`). The placeholder `clock` system goes at kickoff.
+- `game/scenes/` draw the world; `game/main.js` only boots; `game/tune.js` holds the F8 knobs.
+- `game/save.js` — a save is the world, each system under its own version: changing what a system
+  keeps means bumping its version plus a migration, and `dev/saves/` proves old saves still load.
+- `design/game.md` is a short **index** (the game in a sentence, pillars, the core loop, the systems);
+  each system's rules go on **its own page**, `design/systems/<id>.md`. `yak check` warns when a
+  must-read page grows past its budget.
 
 ## 3. Ask what blocks you, default the rest
 Blocking (you can't build the first playable without these):
@@ -40,10 +54,14 @@ what you defaulted. Wait for their go. Then build it small and real. Real level 
 from the design file, no greybox placeholders they have to imagine past. Then get them playing:
 Games → Play, F9 to tell you about a moment, F8 for anything you exposed to tune.
 
+Before writing a system from scratch, check the systems shelf (`node cli/yak.mjs designs systems`);
+`design-use <game> systems <id>` copies one in with its page and test.
+
 Write down what you agreed:
 - `AGENTS.md` (the one page, with **Now**)
-- `design/game.md` (how it plays, in plain words)
-- `DECISIONS.md` (the person's calls, numbered, in their words)
+- `design/game.md` (the index: what it is, pillars, the loop, the list of systems) and one
+  `design/systems/<id>.md` per system you built
+- `DECISIONS.md` (the person's calls, numbered, in their words, each with its system)
 - `CHANGELOG.md` (what they can play)
 
 In their brain dumps everything is a thought until they call it a decision.
@@ -61,7 +79,9 @@ When a toy turns out to be worth growing, change `size` in `game.json` and read 
 before the content multiplies. A few habits pay for themselves:
 - Content is data, one small file per thing.
 - Logic stays pure and deterministic, so it's testable.
-- One place per fact.
+- One place per fact; one page per system, so any task's reading stays small.
+- A system that's grown general enough for other games goes to the systems shelf
+  (`design-promote <game> systems <id> --system <its id>`, skill design).
 
 `docs/LESSONS.md` → Building big has the details.
 

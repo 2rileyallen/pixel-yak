@@ -83,7 +83,8 @@ before the content multiplies. A few habits pay for themselves:
 - A system that's grown general enough for other games goes to the systems shelf
   (`design-promote <game> systems <id> --system <its id>`, skill design).
 
-`docs/LESSONS.md` → Building big has the details.
+`docs/LESSONS.md` → Building big has the details (and `local/LESSONS.md`: what the person's own
+games taught, if there is one).
 
 ## Its own repo
 A game worth keeping becomes its own git repo inside `games/<id>/`; the harness ignores it. With the

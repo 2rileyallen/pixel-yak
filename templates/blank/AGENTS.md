@@ -30,6 +30,8 @@ in `systems/index.js` · `game/scenes/` draw the world · `game/save.js` saves (
 `node cli/yak.mjs engine {{ID}}`) · `dev/` the tests.
 **Never hand-edit** `game/art/edits/` or `game/sound/edits/` (the user's pixels and notes), `tuning/`
 (their F8 choices) or `design/lessons/`.
+**Search with this folder as the path** (`games/{{ID}}/`): Pixel Yak's git ignores `games/`, so a
+search from the Pixel Yak folder skips this game and finds only the harness's copies.
 
 Everything particular to this game lives in this folder: its state (**Now** above), decisions,
 accounts and online setup (`skills/`, which win over the general skills). None of it goes into Pixel

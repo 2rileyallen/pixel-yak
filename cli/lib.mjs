@@ -80,12 +80,21 @@ export function notesSincePlan(r) {
   return r.plannedAt ? notes.filter((n) => n.ts > r.plannedAt) : notes;
 }
 
+// The Electron program (checks, sheets and clips run pages in it), or a plain-words stop when Pixel
+// Yak's packages aren't installed yet (a fresh clone before `npm install`).
+export function electronPath() {
+  let p = null;
+  try { p = createRequire(import.meta.url)('electron'); } catch { /* not installed */ }
+  if (typeof p !== 'string' || !fs.existsSync(p)) fail('Electron isn\'t installed yet. In the Pixel Yak folder run: npm install   (node cli/yak.mjs doctor checks the rest)');
+  return p;
+}
+
 // Run a headless studio page (one Electron start) that prints TOOLRESULT <json> → { data, png }.
 export function runTool(params, name, { page = 'studio/ui/tools.html', waitMs = 20000, full = true } = {}) {
   const dir = path.join(D.ROOT, 'scratch', 'tools');
   fs.mkdirSync(dir, { recursive: true });
   const png = path.join(dir, name.replace(/[^A-Za-z0-9_.-]/g, '_') + '.png');
-  const electron = createRequire(import.meta.url)('electron');
+  const electron = electronPath();
   const q = new URLSearchParams(params);
   const r = spawnSync(electron, [path.join(D.ROOT, 'tools', 'capture.cjs'), `${page}?${q}`, png, '1400', '700', String(waitMs), ...(full ? ['--full'] : [])], { stdio: 'ignore' });
   if (r.status !== 0) fail(`the headless page ${page} failed to run (electron exited ${r.status})`);

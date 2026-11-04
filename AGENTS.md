@@ -16,8 +16,8 @@ they think faster. The plate is shared:
 
 ## Hard lines (never broken)
 1. **Their edits are theirs.** Pixels, sound edits, tuning choices and notes live in each game's
-   `game/art/edits/`, `game/sound/edits/`, `tuning/` and `design/lessons/`. Never overwrite, delete
-   or redraw them.
+   `game/art/edits/`, `game/sound/edits/`, `tuning/` and `design/lessons/`; their playtest saves are
+   backed up in `local/saves/<id>/`. Never overwrite, delete or redraw them.
 2. **Nothing goes online and nothing costs money without their word in chat.** That covers deploys,
    publishing, paid APIs, and pushing to anything public.
 3. **No secrets in files.**
@@ -28,19 +28,24 @@ they think faster. The plate is shared:
 Everything else in this repo is one of two things:
 - A **contract**: a file format the tools depend on (`docs/contracts/`). Change one on purpose,
   with a version bump.
-- **Advice**: a lesson with its reason (`docs/LESSONS.md`, the skills, each game's design files). If
-  you can do better, say why and do it.
+- **Advice**: a lesson with its reason (`docs/LESSONS.md`, the person's own `local/LESSONS.md`, the
+  skills, each game's design files). If you can do better, say why and do it.
 
 ## Starting a session
 1. This page.
 2. **The person names a game** (or a request is about one): read `games/<id>/AGENTS.md`, its one
    page (its **Now** line says where it stands), then `node cli/yak.mjs inbox <id>` for its tickets.
-   Read nothing about any other game.
+   Read nothing about any other game. **Search inside its folder:** `games/` is ignored by this
+   repo's git, so a code search from here (ripgrep, and the search tools built on it) skips every
+   game except the demo and finds only the harness's copies. Always give the search the path
+   `games/<id>/`.
 3. **No game named yet:** `node cli/yak.mjs games` (one line each) and `node cli/yak.mjs inbox`
    (a count per game, never their tickets), then ask which game, or follow skill new-game.
 4. Then only what the task needs: the game's page says which file to read for which task, a
    system's rules are on its own page (`design/systems/<id>.md`), and decisions are looked up
    (`node cli/yak.mjs decisions <id> <#n|system>`), never read through. The table below names the skill.
+5. Something not installed, or a command failing on a new computer: `node cli/yak.mjs doctor` says
+   what's missing and how to fix it.
 
 **Each game keeps its own knowledge.** Its state, decisions, accounts, online site and anything else
 particular to it live in its own folder: `AGENTS.md`, `DECISIONS.md`, `design/`, `skills/`.
@@ -65,7 +70,7 @@ particular to it live in its own folder: `AGENTS.md`, `DECISIONS.md`, `design/`,
 | `tools/` | Capture tests, check runner, clip recorder, linter |
 | `templates/blank/` | What every new game is copied from |
 | `docs/` | `STUDIO.md` (the manual), `contracts/` (file formats), `LESSONS.md` (what past games taught) |
-| `local/` | The person's private profile (ignored by git): ideas, requests about Pixel Yak, their own designs, brand |
+| `local/` | The person's private profile (ignored by git): ideas, requests about Pixel Yak, their own designs, `LESSONS.md` (what their games taught), save backups, brand. Updating Pixel Yak never touches it |
 
 ## Task → skill (`.agents/skills/<name>/SKILL.md`)
 | Task | Skill |

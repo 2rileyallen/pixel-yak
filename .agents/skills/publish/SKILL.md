@@ -19,8 +19,9 @@ domains, no paid resources, no settings changes they didn't ask for. Their accou
 ## What every build has in common
 1. **Only a commit goes up, never the working tree.** Build from git (`git archive` of the game
    repo into a temp folder). A game with its own engine copy (`games/<id>/engine/`, the default) is
-   complete on its own; an older game still on the shared engine also needs the harness's committed
-   `engine/` (record which commit in `LIVE.json`). Unfinished work stays home.
+   complete on its own, so no change to Pixel Yak can reach what players have. A game still on the
+   shared engine gets its own copy first (`node cli/yak.mjs engine-adopt <game>`, its full checks,
+   a commit), never a release that depends on the harness's `engine/`. Unfinished work stays home.
 2. **The game's full checks pass first**: `node cli/yak.mjs test <game> --full`. Look at the boot
    screenshots.
 3. **Saves**: a player's saves live in their browser, tied to the site's address. Never move the

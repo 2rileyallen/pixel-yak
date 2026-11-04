@@ -4,6 +4,7 @@
   "description": "A pixel-art game studio you run with your AI: the AI writes the games (art, music and code are all code), you play, paint over the art, tune the music and say what you think.",
   "main": "studio/main/main.mjs",
   "type": "module",
+  "engines": { "node": ">=22" },
   "scripts": {
     "start": "electron .",
     "yak": "node cli/yak.mjs",

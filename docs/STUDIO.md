@@ -38,6 +38,13 @@ Help is on F1.
 | **F5** | Restart the game (it picks up code the AI just wrote). |
 | **F12** | The game's developer tools. |
 
+**Your saves are kept.** A game opened from the studio saves into the studio's own browser storage,
+which a reinstall or a new computer loses. So the studio copies each game's saves to
+`local/saves/<id>/` when its window closes and every five minutes while it runs (only when something
+changed; the newest ten copies plus one a day for a month). When a game starts with no saves on this
+computer and a copy exists, the studio asks before putting it back. Saves that are there are never
+written over.
+
 ## Talking to the AI
 - **Ask AI** (top bar, and in each view) writes a request. Pick the kind and how strong a model it
   needs: **smart** for design, new rigs, style learning, hard bugs; **builder** for content and small
@@ -66,6 +73,7 @@ Help is on F1.
 | `designs` / `design` / `design-use` / `design-promote` / `design-diff` | The design library, including the systems shelf |
 | `engine [game]` / `engine-diff` / `engine-pull` / `engine-adopt` | Each game's own engine copy: what's new in the harness, bringing it in on purpose |
 | `games` / `new-game` / `check` / `test <game> [--changed\|--full]` / `hooks` | Games and their checks |
+| `doctor` | Is this computer ready (Node, git and your git name, packages, ffmpeg), and which games a harness change could reach |
 
 Skills (`.agents/skills/`) say how to use these for each kind of task. `AGENTS.md` has the table.
 
@@ -82,6 +90,8 @@ Skills (`.agents/skills/`) say how to use these for each kind of task. `AGENTS.m
 | Requests | `games/<id>/requests/` (+ attachments and F9 save-states). About Pixel Yak itself: `local/inbox/`. |
 | Clips | `games/<id>/clips/<name>.clip.json` (+ shot scripts); renders in `clips/out/` |
 | The design library | `designs/<art|sound|game>/<id>/`; yours in `local/designs/` |
+| **Your playtest saves** (a copy) | `local/saves/<id>/` |
+| What your games taught | `local/LESSONS.md` (yours); `docs/LESSONS.md` ships with Pixel Yak |
 | The file formats | `docs/contracts/` |
 
 ## Live sync

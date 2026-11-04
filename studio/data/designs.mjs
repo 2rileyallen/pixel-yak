@@ -298,7 +298,7 @@ export async function useDesign(gameId, shelf, id, { force = false } = {}) {
 // A system (shelf systems): its page design/systems/<system>.md, its code game/systems/<system>/ (or
 // game/systems/<system>.js, which becomes index.js) and its tests dev/systems/<system>*.test.mjs.
 // `system` names the game's system (default: the new id).
-export async function promoteDesign(gameId, shelf, newId, { local = false, title = '', files = [], system = '' } = {}) {
+export async function promoteDesign(gameId, shelf, newId, { local = true, title = '', files = [], system = '' } = {}) {
   assertId('project', gameId);
   if (!SHELVES.includes(shelf)) throw new Error(`unknown shelf "${shelf}" (${SHELF_LIST})`);
   assertId('design', newId);

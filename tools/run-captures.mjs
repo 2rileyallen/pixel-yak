@@ -32,8 +32,10 @@ if (!all.length) { console.error(`no tests in games/${pid}/dev/tests/`); process
 const unknown = names.filter((n) => !all.includes(n));
 if (unknown.length) { console.error(`unknown test(s): ${unknown.join(', ')} — have: ${all.join(', ')}`); process.exit(2); }
 const todo = names.length ? names : all;
-const electron = createRequire(import.meta.url)('electron');
-const rel = (p) => path.relative(ROOT, p).split(path.sep).join('/');
+let electron = null;
+try { electron = createRequire(import.meta.url)('electron'); } catch { /* not installed */ }
+if (typeof electron !== 'string' || !fs.existsSync(electron)) { console.error("Electron isn't installed yet. In the Pixel Yak folder run: npm install   (node cli/yak.mjs doctor checks the rest)"); process.exit(2); }
+const rel =(p) => path.relative(ROOT, p).split(path.sep).join('/');
 
 function runOne(name) {
   const out = path.join(outRoot, name);

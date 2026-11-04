@@ -1,8 +1,7 @@
 // cli/commands/clips.mjs — promo clips (docs/contracts/CLIPS.md, skill promo): list a game's clips,
 // render or probe one with the recorder (tools/clip.cjs), start a new recipe from the starter.
 import { spawn } from 'node:child_process';
-import { createRequire } from 'node:module';
-import { D, out, fail, gameArg, ago, plural } from '../lib.mjs';
+import { D, out, fail, gameArg, ago, plural, electronPath } from '../lib.mjs';
 
 export const section = { title: 'Clips (promo videos)', order: 60 };
 
@@ -38,7 +37,7 @@ export const commands = {
       const name = pos[1];
       if (!D.isClipName(name || '')) fail('usage: clip <game> <name> [--probe] — `clips <game>` lists them');
       await D.readClip(p.id, name).catch((err) => fail(err.message));
-      const electron = createRequire(import.meta.url)('electron');
+      const electron = electronPath();
       const args = D.recorderArgs(p.id, name, { probe: !!opt.probe, ref: typeof opt.ref === 'string' ? opt.ref : null, musicFile: typeof opt['music-file'] === 'string' ? opt['music-file'] : null });
       const child = spawn(electron, args, { stdio: ['ignore', 'pipe', 'pipe'] });
       let done = null, error = null, lastPct = -1, buf = '', errText = '';

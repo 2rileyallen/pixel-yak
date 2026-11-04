@@ -154,6 +154,9 @@ export class ProjectsView {
             await app.setProject(r.project.id);
             this.render();
             showKickoff(app, r.project, r.kickoff);
+            // git made the repo but couldn't commit (no git name on this computer yet): say how, once
+            if (r.git && r.git.repo && !r.git.commit) toast('The game is ready, but git doesn\'t know your name yet, so its first commit wasn\'t made. Run: git config --global user.name "Your Name" (and user.email), then ask the AI to commit.', { kind: 'warn', timeout: 15000 });
+            else if (r.git && !r.git.repo) toast('The game is ready, but git isn\'t installed, so it isn\'t a repo yet (history, branches, clips). Install git from git-scm.com.', { kind: 'warn', timeout: 15000 });
             return true;
           } catch (err) { m.setBusy(false); toast(err.message, { kind: 'error' }); return false; }
         },

@@ -8,7 +8,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { out, fail } from './lib.mjs';
+
+// A clear word before anything else loads: an older Node fails later in ways that say nothing useful.
+const NODE_MAJOR = Number(process.versions.node.split('.')[0]);
+if (NODE_MAJOR < 22) {
+  process.stderr.write(`error: Pixel Yak needs Node.js 22 or newer; this is ${process.version}. Install the current LTS from https://nodejs.org, then run the command again.\n`);
+  process.exit(1);
+}
+const { out, fail } = await import('./lib.mjs');
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 

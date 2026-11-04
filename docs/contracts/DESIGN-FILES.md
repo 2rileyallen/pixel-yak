@@ -62,7 +62,7 @@ shade by its colour); the starter art needs one of `GLOW`/`SOUL`/`SKY`/`CLOTH` a
 | Step | Command | What happens |
 |---|---|---|
 | **Use** | `node cli/yak.mjs design-use <game> <shelf> <id>` (or **New game** / `new-game --art <id> --sound <id> --game <id>`) | Copies the entry into the game: `DESIGN.md` → `design/<shelf>.md` (`genre.md` for the game shelf; a system's to `design/systems/<id>.md`, its code to `game/systems/<id>/`, its test to `dev/systems/`), with a note saying where it started; relative imports are rewritten for where each file lands, and engine imports point at the game's own engine copy; `game.json` `designs.<shelf>` records the id (`designs.systems` is a list). **Refuses** when the game already has its own copy — that copy holds the game's learned rules. `--force` (only when the user asks) moves the old files to `design/archive/<shelf>-<time>/` first, keeps the user's first notes, and warns if the user's pixel edits or the game's code use materials the new palette lacks. |
-| **Promote** | `node cli/yak.mjs design-promote <game> <shelf> <newId> [--local] [--title ".."]` | Copies `design/<shelf>.md` + its code twins into `designs/<shelf>/<newId>/` (public) or `local/designs/…` (`--local`), drops the copy note and the user's first notes, and adds a changelog line "Promoted from …". Never copies `lessons/` or `archive/`. A system: `--system <its id in the game>`; its imports are pointed back at the harness engine and the entry's own files, and any import still reaching into the game is listed (make it a parameter, or include it). Then rewrite it as a general entry. |
+| **Promote** | `node cli/yak.mjs design-promote <game> <shelf> <newId> [--library] [--title ".."]` | Copies `design/<shelf>.md` + its code twins into `local/designs/<shelf>/<newId>/` (the person's own, untouched by Pixel Yak updates) or, with `--library`, `designs/…` (the public library that ships with Pixel Yak), drops the copy note and the user's first notes, and adds a changelog line "Promoted from …". Never copies `lessons/` or `archive/`. A system: `--system <its id in the game>`; its imports are pointed back at the harness engine and the entry's own files, and any import still reaching into the game is listed (make it a parameter, or include it). Then rewrite it as a general entry. |
 | **Pull** | `node cli/yak.mjs design-diff <game> <shelf> [--from <id>]` | Shows the game's copy (`-`) against a library entry (`+`). A pull is done **by hand**, bringing over only what the user picks. |
 
 **Nothing flows silently.** A library change never restyles a game; a game's change never touches
@@ -74,5 +74,5 @@ $ node cli/yak.mjs new-game moss-mill --name "Moss Mill" --art cozy-factory --ga
 $ node cli/yak.mjs design-use moss-mill art gba-bright
 error: games/moss-mill already has its own art design (… started from designs/art/cozy-factory) …
 $ node cli/yak.mjs design-diff moss-mill art          # later: what's new in cozy-factory?
-$ node cli/yak.mjs design-promote moss-mill art mossy-mill --local --title "Mossy Mill"
+$ node cli/yak.mjs design-promote moss-mill art mossy-mill --title "Mossy Mill"   # → local/designs/art/mossy-mill/
 ```

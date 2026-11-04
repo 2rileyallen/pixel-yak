@@ -9,7 +9,7 @@ e.g. .worktrees/<name>, so node_modules resolves from the parent). Work and comm
 edit files in the main checkout. If you ever link node_modules into a worktree, remove the link before
 removing the worktree (removal can follow it and delete the real node_modules).
 
-READ FIRST: the game's plan file, its SCALE-REPORT.md §<n>, its ENGINEERING.md, AGENTS.md, docs/LESSONS.md
+READ FIRST: the game's plan file, its SCALE-REPORT.md §<n>, its ENGINEERING.md, AGENTS.md, docs/LESSONS.md (+ local/LESSONS.md if there is one)
 (advice). Then only the code you own.
 
 YOU OWN: <paths>. In parallel: <phase> owns <paths>, <phase> owns <paths> — don't touch those; keep

@@ -4,8 +4,10 @@ Experience from the games made before and with Pixel Yak. Each entry says what w
 and why. Nothing here is binding. If you have a better way, say why and use it. Skim the section
 you need; read **Building big** before a game is meant to grow.
 
-**Adding to it:** a pattern that worked or a trap that cost you time, as one short entry in the
-right section (what, why). Keep the file lean: merge entries instead of growing it.
+**Adding to it:** this file ships with Pixel Yak, so what the person's own games teach goes in
+`local/LESSONS.md` (theirs; updating Pixel Yak never touches it; same sections). It goes here only
+when they say it's for everyone. Either way: one short entry in the right section (what, why), no
+game's names or facts, and keep it lean: merge entries instead of growing it.
 
 ## Working with the person
 - **Their playing is the valuable part, and the slow part.** Save them time around it (short briefs,

@@ -20,9 +20,10 @@ commands: `docs/contracts/DESIGN-FILES.md`.
   purpose; `--force` is for when the user said so.
 - **Nothing flows silently.** A library change never restyles a game, and a game's change never
   reaches the library until it's promoted. Pulls are deliberate and picked by the user.
-- **The public library stays clean.** `designs/` ships publicly: no game's names, characters,
-  story or setting, no fan material, no copied assets, no personal paths. Private entries go to
-  `local/designs/` (`--local`).
+- **The person's library is theirs.** A promoted entry goes to `local/designs/` by default: their own,
+  private, and never touched when Pixel Yak itself is updated. `designs/` ships publicly with Pixel
+  Yak (`--library`), only when the person says an entry is for everyone, and stays clean: no game's
+  names, characters, story or setting, no fan material, no copied assets, no personal paths.
 
 ## At kickoff: pick or blend
 1. `node cli/yak.mjs designs` — every entry with a one-line summary and the games using it;
@@ -49,8 +50,9 @@ later, once it has lessons behind it.
 ## Promote: a game's design becomes a library entry
 When the user says a game's look/sound/design is worth reusing (or after several distillations
 made it clearly its own):
-1. Agree an id and title with the user, and **public or private** (`--local`).
-2. `node cli/yak.mjs design-promote <game> <shelf> <newId> [--local] --title "<Title>"`.
+1. Agree an id and title with the user. It stays theirs (`local/designs/`) unless they say it's
+   for every Pixel Yak user (`--library`).
+2. `node cli/yak.mjs design-promote <game> <shelf> <newId> [--library] --title "<Title>"`.
 3. Rewrite the new `DESIGN.md` as a general entry: the first paragraph describes the look/kind,
    not the game; game-only rules become general ones or go; exemplars are described generically;
    keep the changelog line "Promoted from …" and the lessons behind each rule.
@@ -73,7 +75,7 @@ Each game writes systems; the good, general ones come back here, so the next gam
   says, add a row to `design/game.md`'s Systems table, run the game's tests. The copy is the game's
   own: change it freely; nothing flows back by itself.
 - **Promote** (the user says a system is worth reusing, or you notice the same system written a
-  second time): `design-promote <game> systems <newId> --system <its id in the game> [--local]`. It
+  second time): `design-promote <game> systems <newId> --system <its id in the game> [--library]`. It
   lists every import that reaches into the game (data, other systems): make those parameters (the
   entry is a factory that takes what it needs, like `followCamera({ target, view, bounds })`) or
   include them, before another game uses it. Its page says what it does, how to wire it in, its

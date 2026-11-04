@@ -266,12 +266,12 @@ function pullPrompt(p, d) {
 function promotePrompt(p, shelf) {
   if (shelf === 'systems') {
     return `One of ${p.name}'s systems is worth reusing in other games: promote it to the design library's systems shelf. ` +
-      `Ask me which system (its file in game/systems/ and its page in design/systems/), suggest an id and a title, and ask whether it goes in the public library (designs/) or stays mine (local/designs/, --local). ` +
-      `Then run \`node cli/yak.mjs design-promote ${p.id} systems <id> --system <its id in the game> [--local] --title "<title>"\`. ` +
+      `Ask me which system (its file in game/systems/ and its page in design/systems/), suggest an id and a title, and ask whether it stays mine (local/designs/, the default) or goes in the public library that ships with Pixel Yak (designs/, --library). ` +
+      `Then run \`node cli/yak.mjs design-promote ${p.id} systems <id> --system <its id in the game> [--library] --title "<title>"\`. ` +
       `Make it general before any other game uses it: whatever it imports from the game (data, other systems) is passed in or included — the command lists those — and its page says how a game wires it in, with no names or story from ${p.name}. Follow skill design.`;
   }
   return `${p.name}'s ${WHAT[shelf]} is worth keeping: promote it to the design library as a new ${shelf} entry. ` +
-    `Suggest an id and a title, and ask me whether it goes in the public library (designs/) or stays mine (local/designs/, --local). ` +
-    `Then run \`node cli/yak.mjs design-promote ${p.id} ${shelf} <id> [--local] --title "<title>"\` and rewrite the new DESIGN.md as a general entry: ` +
+    `Suggest an id and a title, and ask me whether it stays mine (local/designs/, the default) or goes in the public library that ships with Pixel Yak (designs/, --library). ` +
+    `Then run \`node cli/yak.mjs design-promote ${p.id} ${shelf} <id> [--library] --title "<title>"\` and rewrite the new DESIGN.md as a general entry: ` +
     `the ${WHAT[shelf]} in general words, no names, story or characters from the game, and how to ask for things in it. Follow skill design.`;
 }

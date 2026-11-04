@@ -52,19 +52,19 @@ export const commands = {
     },
   },
   'design-promote': {
-    usage: 'design-promote <game> <shelf> <newId> [--local] [--title ".."] [--files a,b] [--system <id>]',
-    help: "copy a game's design/<shelf>.md (+ its code twins) into the library as a new entry, with a\nchangelog line saying where it came from. --local puts it in local/designs/ (yours only);\nwithout it, it goes into designs/ — the public library that ships with Pixel Yak. systems: the game's\nsystem --system <id> (default newId): its page, code and tests",
+    usage: 'design-promote <game> <shelf> <newId> [--library] [--title ".."] [--files a,b] [--system <id>]',
+    help: "copy a game's design/<shelf>.md (+ its code twins) into the library as a new entry, with a\nchangelog line saying where it came from. It goes into local/designs/ (the person's own: updating\nPixel Yak never touches it). --library puts it in designs/, the public library that ships with\nPixel Yak, only when the person says it's for everyone. systems: the game's system --system <id>\n(default newId): its page, code and tests",
     async run({ pos, opt }) {
       const [game, shelf, newId] = pos;
-      if (!game || !shelf || !newId) fail('usage: design-promote <game> <shelf> <newId> [--local] [--title ".."] [--system <id>]');
+      if (!game || !shelf || !newId) fail('usage: design-promote <game> <shelf> <newId> [--library] [--title ".."] [--system <id>]');
       const files = typeof opt.files === 'string' ? opt.files.split(',').map((s) => s.trim()).filter(Boolean) : [];
       let r;
-      try { r = await D.promoteDesign(game, shelfArg(shelf), newId, { local: !!opt.local, title: typeof opt.title === 'string' ? opt.title : '', files, system: typeof opt.system === 'string' ? opt.system : '' }); } catch (err) { fail(err.message); }
+      try { r = await D.promoteDesign(game, shelfArg(shelf), newId, { local: !opt.library, title: typeof opt.title === 'string' ? opt.title : '', files, system: typeof opt.system === 'string' ? opt.system : '' }); } catch (err) { fail(err.message); }
       out(`New ${shelf} design "${newId}" in ${r.dir}/ (${r.source === 'local' ? 'yours only' : 'the public library'}):`);
       for (const f of r.written) out(`  wrote ${f}`);
       for (const l of r.leaks || []) out(`WARN ${l} — outside the entry: make it general (pass it in, or include it) before another game uses it`);
       out(`Now read ${r.dir}/DESIGN.md through as a library entry: make the title and first paragraph describe the look/kind generally, and say how to ask for things in it.`);
-      if (r.source === 'library') out(`designs/ ships publicly with Pixel Yak: take out this game's names, story, characters and anything private before it's committed — or move it to local/designs/ (--local).`);
+      if (r.source === 'library') out(`designs/ ships publicly with Pixel Yak: take out this game's names, story, characters and anything private before it's committed — or promote it again without --library to keep it the person's own (local/designs/).`);
     },
   },
   'design-diff': {

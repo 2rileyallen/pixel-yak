@@ -3,9 +3,8 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { createRequire } from 'node:module';
 import { buildLegend, diffToPatch, refsInEdit, EDITS_FORMAT } from '../../engine/art/edits.js';
-import { D, out, fail, rel, ago, findRequest, printRequest, runTool, findSource, gameArg, plural } from '../lib.mjs';
+import { D, out, fail, rel, ago, findRequest, printRequest, runTool, findSource, gameArg, plural, electronPath } from '../lib.mjs';
 
 export const section = { title: 'Art (start here — one command instead of exploring; the user\'s pixels are never overwritten)', order: 20 };
 
@@ -154,7 +153,7 @@ export const commands = {
       if (opt.raw) q.set('raw', '1');
       if (opt.edited) q.set('edited', '1');
       q.set('edits', p.editsDir);
-      const electron = createRequire(import.meta.url)('electron');
+      const electron = electronPath();
       const r = spawnSync(electron, [path.join(D.ROOT, 'tools', 'capture.cjs'), `studio/ui/sheet.html?${q}`, `${base}.png`, '1400', '900', '4000', `--pages=${pageH}`], { encoding: 'utf8' });
       const m = /PAGEFILES (\d+)/.exec(r.stdout || '');
       if (r.status !== 0 || !m) fail(`capture failed${r.stderr ? ': ' + r.stderr.trim().slice(-500) : ''} — see ${rel(base + '.console.txt')}`);

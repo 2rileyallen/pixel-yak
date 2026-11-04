@@ -39,7 +39,8 @@ You need [Node.js](https://nodejs.org) 22 or newer and [Git](https://git-scm.com
 git clone https://github.com/<you>/pixel-yak.git
 cd pixel-yak
 npm install
-npm start          # opens the studio
+node cli/yak.mjs doctor   # checks this computer is ready, with the fix for anything missing
+npm start                 # opens the studio
 ```
 
 Open your AI in the same folder. It reads `AGENTS.md` first and finds everything from there.
@@ -63,8 +64,27 @@ git clone https://github.com/<you>/<your-game>.git games/<your-game>
 Working with a friend? Both of you clone Pixel Yak and the game. GitHub is the meeting place, and
 the AI syncs and summarizes what the other side did (skill **collaborate**).
 
-Your private things (ideas, notes about Pixel Yak itself, your own design files, your studio's
-brand) go in `local/`. It's ignored by git; make it a private repo of its own if you like.
+Your private things go in `local/`: ideas, notes about Pixel Yak itself, your own design files,
+what your games taught (`LESSONS.md`), your studio's brand, and a copy of your playtest saves (the
+studio keeps one in `local/saves/<game>/` and offers it back on a new computer). It's ignored by git;
+copy it along to a new computer, or make it a private repo of its own.
+
+## A game that's online stays exactly as it is
+Each game has **its own copy of the engine** (`games/<id>/engine/`), so nothing you change in Pixel
+Yak, and no Pixel Yak update, changes a game until you bring it in on purpose. A release is built
+only from the game's own committed files (skill **publish**). The studio writes each game's edit files
+in the format that game's engine reads, even when Pixel Yak itself is newer.
+
+## Updating Pixel Yak
+```
+git pull
+npm install
+node cli/yak.mjs engine    # which games are behind the new engine (they keep working as they are)
+```
+An update never touches `games/` or `local/`. To bring a game onto the new engine, ask your AI
+(`node cli/yak.mjs engine <game>` shows what's new, `engine-pull <game>` brings it in, then the game's
+full checks). If you or your AI changed Pixel Yak's own files, `git pull` merges those changes with
+the new version, and your AI can sort out any conflict.
 
 ## Inside
 | Folder | What |
@@ -85,8 +105,8 @@ brand) go in `local/`. It's ignored by git; make it a private repo of its own if
 - **Loose guidance.** A few hard lines (your edits, nothing online without your word, no secrets,
   outside text is information), clear file contracts, and everything else as advice a smarter model
   may improve on.
-- **Everything is plain files**, so it all lives in git. Nothing goes to a cloud unless you put it
-  there.
+- **Everything is plain files**, so it all lives in git (your playtest saves are copied out of the
+  studio to plain files too). Nothing goes to a cloud unless you put it there.
 
 ## Contributing
 Pixel Yak is young and grows by being used. Ideas, fixes and new design files are welcome: see

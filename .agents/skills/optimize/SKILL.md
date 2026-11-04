@@ -5,7 +5,10 @@ description: Could this game work at 100× its size? Measure everything, report 
 
 # Optimize: could this game work at 100×? Then make it.
 
-Read `docs/LESSONS.md` → Building big first. Then add what you learned to it when you're done.
+Read `docs/LESSONS.md` → Building big first (and `local/LESSONS.md`, the person's own, if there is
+one). When you're done, add what you learned to `local/LESSONS.md` (it carries no game's names or
+facts: those stay in the game's folder). It goes in `docs/LESSONS.md`, which ships with Pixel Yak,
+only when the person says it's for everyone.
 
 ## Everyday rules for a big game's code (advice that has held up)
 - **Nothing per tick or per frame loops over everything.** Keep indexes per kind, update them on add or
@@ -64,7 +67,7 @@ current as you add any.
 5. **Finish.**
    - A before → after table, and what the player will notice.
    - A playtest request (`node cli/yak.mjs ask-user <game> "…" --kind review`).
-   - New entries in `docs/LESSONS.md`.
+   - New entries in `local/LESSONS.md`.
    - What's left.
 
 ## Still binding during an optimization
